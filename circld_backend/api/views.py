@@ -2,10 +2,11 @@ from django.shortcuts import render
 
 # Create your views here.
 # api/views.py
+from rest_framework.response import Response
 from django.contrib.auth import get_user_model
-from rest_framework import viewsets, permissions
+from rest_framework import viewsets, permissions, status, generics
 from .models import Group, Expense, Message
-from .serializers import UserSerializer, GroupSerializer, ExpenseSerializer, MessageSerializer
+from .serializers import UserSerializer, GroupSerializer, ExpenseSerializer, MessageSerializer, SignupSerializer
 
 User = get_user_model()
 
@@ -34,3 +35,18 @@ class MessageViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         serializer.save(sender=self.request.user)
+
+
+class SignupView(generics.GenericAPIView):
+    """
+    POST /api/register/  → creates a new User if the data is valid.
+    """
+    serializer_class = SignupSerializer
+    permission_classes = [permissions.AllowAny]  # anyone (even unauthenticated) can register
+
+    def post(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        if serializer.is_valid():
+            user = serializer.save()
+            return Response({"detail": "User created successfully."}, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
