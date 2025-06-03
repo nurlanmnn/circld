@@ -6,6 +6,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
 import LoginScreen from './src/screens/Auth/LoginScreen';
 import SignupScreen  from './src/screens/Auth/SignupScreen';
+import CreateGroupScreen  from './src/screens/CreateGroupScreen';
 import GroupList from './src/screens/GroupList';
 import GroupDetail   from './src/screens/GroupDetail';
 // (Import other screens as you build them)
@@ -29,7 +30,11 @@ export default function App() {
             component={SignupScreen}
             options={{ headerShown: false }}
           />
-
+          <Stack.Screen
+            name="CreateGroup"
+            component={CreateGroupScreen}
+            options={{ title: 'New Group' }}
+          />
           <Stack.Screen
             name="Groups"
             component={GroupList}

@@ -14,7 +14,9 @@ class UserSerializer(serializers.ModelSerializer):
 class GroupSerializer(serializers.ModelSerializer):
     members = serializers.PrimaryKeyRelatedField(
         many=True,
-        queryset=User.objects.all()
+        queryset=User.objects.all(),
+        required=False,        # <— allow POST data without "members"
+        default=[]             # <— if not provided, default to empty list
     )
 
     class Meta:

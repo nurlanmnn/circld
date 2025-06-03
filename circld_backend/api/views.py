@@ -19,6 +19,14 @@ class GroupViewSet(viewsets.ModelViewSet):
     queryset = Group.objects.prefetch_related('members').all()
     serializer_class = GroupSerializer
     permission_classes = [permissions.IsAuthenticated]
+    
+    def perform_create(self, serializer):
+        # 1) Create the group with whatever fields were passed (e.g. “name”)
+        group = serializer.save()
+        # 2) Add the requesting user as a member of that new group
+        group.members.add(self.request.user)
+        # 3) You could also assign extra behavior, e.g. set group.owner = request.user
+        #    if you add an “owner” ForeignKey on Group in the future.
 
 class ExpenseViewSet(viewsets.ModelViewSet):
     queryset = Expense.objects.select_related('paid_by', 'group').all()

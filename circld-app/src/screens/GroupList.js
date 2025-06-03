@@ -1,4 +1,5 @@
 // src/screens/GroupList.js
+
 import React, { useLayoutEffect } from 'react';
 import {
   View,
@@ -16,30 +17,41 @@ import { client } from '../api/client';
 export default function GroupList({ navigation }) {
   const queryClient = useQueryClient();
 
-  // 1) Logout function: delete tokens, clear cache, navigate to Login
+  // ------- LOGOUT FUNCTION -------
   const logout = async () => {
     try {
       await SecureStore.deleteItemAsync('accessToken');
       await SecureStore.deleteItemAsync('refreshToken');
-      // Clear all cached queries so no old data remains
       queryClient.clear();
-      // Replace stack so user cannot go “back” to the Groups screen
       navigation.replace('Login');
     } catch (err) {
       Alert.alert('Logout error', 'Something went wrong while logging out.');
     }
   };
 
-  // 2) Inject a “Logout” button into the header
+  // ------- SET HEADER BUTTONS -------
   useLayoutEffect(() => {
     navigation.setOptions({
+      // Left side: Logout
+      headerLeft: () => (
+        <Button
+          title="Logout"
+          onPress={logout}
+          color="#d9534f"
+        />
+      ),
+      // Right side: Create (“+”)
       headerRight: () => (
-        <Button title="Logout" onPress={logout} color="#d9534f" />
+        <Button
+          title="+"
+          onPress={() => navigation.navigate('CreateGroup')}
+          color="#E91E63"
+        />
       ),
     });
   }, [navigation]);
 
-  // 3) Existing data‐fetch logic
+  // ------- FETCH GROUPS -------
   const { data, isLoading, error } = useQuery({
     queryKey: ['groups'],
     queryFn: () => client.get('groups/').then((res) => res.data),
@@ -72,7 +84,6 @@ export default function GroupList({ navigation }) {
   );
 }
 
-// ... your existing styles ...
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#fff', padding: 16 },
   item: {
