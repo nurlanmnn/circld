@@ -7,6 +7,7 @@ from django.contrib.auth import get_user_model
 from rest_framework import viewsets, permissions, status, generics
 from .models import Group, Expense, Message
 from .serializers import UserSerializer, GroupSerializer, ExpenseSerializer, MessageSerializer, SignupSerializer
+from rest_framework.decorators import action
 
 User = get_user_model()
 
@@ -16,9 +17,14 @@ class UserViewSet(viewsets.ReadOnlyModelViewSet):
     permission_classes = [permissions.IsAuthenticated]
 
 class GroupViewSet(viewsets.ModelViewSet):
-    queryset = Group.objects.prefetch_related('members').all()
+    # queryset = Group.objects.prefetch_related('members').all()
     serializer_class = GroupSerializer
     permission_classes = [permissions.IsAuthenticated]
+
+
+    def get_queryset(self):
+        # Only return groups where the current user is a member
+        return Group.objects.filter(members=self.request.user).prefetch_related('members')
     
     def perform_create(self, serializer):
         # 1) Create the group with whatever fields were passed (e.g. “name”)
@@ -27,6 +33,29 @@ class GroupViewSet(viewsets.ModelViewSet):
         group.members.add(self.request.user)
         # 3) You could also assign extra behavior, e.g. set group.owner = request.user
         #    if you add an “owner” ForeignKey on Group in the future.
+    
+    @action(detail=False, methods=['post'], url_path='join')
+    def join_group(self, request):
+        """
+        POST /api/groups/join/  with JSON { "invite_code": "abcd1234" }
+        """
+        code = request.data.get('invite_code', '').strip()
+        if not code:
+            return Response(
+                {"invite_code": ["This field is required."]},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        try:
+            group = Group.objects.get(invite_code=code)
+        except Group.DoesNotExist:
+            return Response(
+                {"detail": "Invalid invite code."},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+        group.members.add(request.user)
+        serializer = self.get_serializer(group)
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
 class ExpenseViewSet(viewsets.ModelViewSet):
     queryset = Expense.objects.select_related('paid_by', 'group').all()

@@ -1,4 +1,4 @@
-// src/screens/GroupList.js
+// circld-app/src/screens/GroupList.js
 
 import React, { useLayoutEffect } from 'react';
 import {
@@ -17,7 +17,7 @@ import { client } from '../api/client';
 export default function GroupList({ navigation }) {
   const queryClient = useQueryClient();
 
-  // ------- LOGOUT FUNCTION -------
+  // 1) Logout helper: clear tokens & navigate to Login
   const logout = async () => {
     try {
       await SecureStore.deleteItemAsync('accessToken');
@@ -25,46 +25,61 @@ export default function GroupList({ navigation }) {
       queryClient.clear();
       navigation.replace('Login');
     } catch (err) {
-      Alert.alert('Logout error', 'Something went wrong while logging out.');
+      Alert.alert('Logout error', 'Something went wrong while logging out');
     }
   };
 
-  // ------- SET HEADER BUTTONS -------
+  // 2) Use React Query to GET /api/groups/
+  const {
+    data: groups,
+    isLoading,
+    isError,
+  } = useQuery({
+    queryKey: ['groups'],
+    queryFn: () => client.get('groups/').then(res => res.data),
+  });
+
+  // 3) Configure the header buttons (Logout, Join, Create)
   useLayoutEffect(() => {
     navigation.setOptions({
-      // Left side: Logout
+      // Left side: a Logout button
       headerLeft: () => (
-        <Button
-          title="Logout"
-          onPress={logout}
-          color="#d9534f"
-        />
+        <Button title="Logout" onPress={logout} color="#d9534f" />
       ),
-      // Right side: Create (“+”)
+
+      // Right side: “Join” + “+” buttons
       headerRight: () => (
-        <Button
-          title="+"
-          onPress={() => navigation.navigate('CreateGroup')}
-          color="#E91E63"
-        />
+        <View style={styles.headerButtons}>
+          <Button
+            title="Join"
+            onPress={() => navigation.navigate('JoinGroup')}
+            color="#FFA500"
+          />
+          <View style={{ width: 8 }} />
+          <Button
+            title="+"
+            onPress={() => navigation.navigate('CreateGroup')}
+            color="#E91E63"
+          />
+        </View>
       ),
     });
   }, [navigation]);
 
-  // ------- FETCH GROUPS -------
-  const { data, isLoading, error } = useQuery({
-    queryKey: ['groups'],
-    queryFn: () => client.get('groups/').then((res) => res.data),
-  });
+  // 4) Render loading / error / empty states
+  if (isLoading) {
+    return <Text style={styles.message}>Loading…</Text>;
+  }
+  if (isError) {
+    return <Text style={styles.message}>Error fetching groups.</Text>;
+  }
 
-  if (isLoading) return <Text style={styles.message}>Loading…</Text>;
-  if (error)      return <Text style={styles.message}>Error fetching groups.</Text>;
-
+  // 5) Render the actual list of groups (only those the user belongs to)
   return (
     <View style={styles.container}>
       <FlatList
-        data={data}
-        keyExtractor={(g) => String(g.id)}
+        data={groups}                       // “groups” is an array of { id, name, members, invite_code }
+        keyExtractor={g => String(g.id)}
         renderItem={({ item }) => (
           <TouchableOpacity
             style={styles.item}
@@ -78,7 +93,9 @@ export default function GroupList({ navigation }) {
             <Text style={styles.title}>{item.name}</Text>
           </TouchableOpacity>
         )}
-        ListEmptyComponent={<Text style={styles.message}>No groups yet.</Text>}
+        ListEmptyComponent={
+          <Text style={styles.message}>No groups yet.</Text>
+        }
       />
     </View>
   );
@@ -87,17 +104,22 @@ export default function GroupList({ navigation }) {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#fff', padding: 16 },
   item: {
-    padding: 12,
+    paddingVertical: 12,
     borderBottomColor: '#eee',
     borderBottomWidth: 1,
   },
   title: {
     fontSize: 18,
+    color: '#333',
   },
   message: {
-    marginTop: 50,
+    marginTop: 40,
     textAlign: 'center',
     fontSize: 16,
     color: '#666',
+  },
+  headerButtons: {
+    flexDirection: 'row',
+    marginRight: 8,
   },
 });
