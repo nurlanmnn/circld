@@ -1,10 +1,15 @@
 # Create your models here.
 from django.contrib.auth.models import AbstractUser
+import uuid
 from django.db import models
 from django.conf import settings
 
 class User(AbstractUser):
     pass
+
+def generate_invite_code():
+    # Use the first 8 characters of a UUID4 hex string.
+    return uuid.uuid4().hex[:8]
 
 class Group(models.Model):
     name = models.CharField(max_length=100)
@@ -14,7 +19,16 @@ class Group(models.Model):
         related_query_name='circld_group',   # query name for lookups
         blank=True,
     )
+    # field: an 8-character invite code
+    invite_code = models.CharField(
+        max_length=8,
+        unique=True,
+        default=generate_invite_code,
+        editable=False  # hide from admin form; generated automatically
+    )
 
+    def __str__(self):
+        return self.name
 
 class Expense(models.Model):
     group    = models.ForeignKey(Group, on_delete=models.CASCADE)

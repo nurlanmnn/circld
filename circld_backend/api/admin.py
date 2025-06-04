@@ -48,7 +48,7 @@ class UserAdmin(DjangoUserAdmin):
 #
 @admin.register(Group)
 class GroupAdmin(admin.ModelAdmin):
-    list_display = ('id', 'name', 'member_count')
+    list_display = ('id', 'name', 'member_count', 'invite_code')
     search_fields = ('name',)
     filter_horizontal = ('members',)   # makes the ManyToManyField appear as a dual-list widget
 

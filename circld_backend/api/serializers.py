@@ -21,7 +21,7 @@ class GroupSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Group
-        fields = ['id', 'name', 'members']
+        fields = ['id', 'name', 'members', 'invite_code']
 
 class ExpenseSerializer(serializers.ModelSerializer):
     paid_by = serializers.PrimaryKeyRelatedField(read_only=True, default=serializers.CurrentUserDefault())

@@ -36,13 +36,13 @@ export default function GroupDetail({ route }) {
         options={{ title: 'Expenses' }}
       />
 
-      {/*
-      <Tab.Screen
+      
+      {/* <Tab.Screen
         name="Events"
         children={() => <EventsScreen groupId={groupId} />}
         options={{ title: 'Events' }}
-      />
-      */}
+      /> */}
+     
     </Tab.Navigator>
   );
 }
