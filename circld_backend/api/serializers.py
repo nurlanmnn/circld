@@ -9,7 +9,7 @@ class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         # pick only the public fields you want to expose
-        fields = ['id', 'username', 'email']
+        fields = ['id', 'first_name', 'last_name', 'username', 'email']
 
 class GroupSerializer(serializers.ModelSerializer):
     members = serializers.PrimaryKeyRelatedField(
@@ -56,18 +56,39 @@ class MessageSerializer(serializers.ModelSerializer):
         read_only_fields = ['ts', 'sender_username']
 
 class SignupSerializer(serializers.ModelSerializer):
+    # Add two write-only fields: first_name and last_name.
+    first_name = serializers.CharField(
+        write_only=True,
+        required=True,
+        max_length=30,
+        help_text="User's first name",
+    )
+    last_name = serializers.CharField(
+        write_only=True,
+        required=True,
+        max_length=30,
+        help_text="User's last name",
+    )
+
     password = serializers.CharField(write_only=True, min_length=8)
     password2 = serializers.CharField(
         write_only=True,
         label="Confirm Password",
         min_length=8,
-        help_text="Re‐enter the password to verify.",
+        help_text="Re-enter the password to verify.",
     )
 
     class Meta:
         model = User
-        # Expose username, email, and the two password fields
-        fields = ['username', 'email', 'password', 'password2']
+        # Include first_name and last_name in addition to the existing fields
+        fields = [
+            'first_name',
+            'last_name',
+            'username',
+            'email',
+            'password',
+            'password2',
+        ]
 
     def validate(self, data):
         """
@@ -79,12 +100,21 @@ class SignupSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         """
-        Remove password2, create user with hashed password.
+        Remove password2, pop first_name/last_name, create user with hashed password.
         """
+        # Pop off the matching password field
         validated_data.pop('password2')
+
+        # Pop off first_name/last_name and save them separately
+        first = validated_data.pop('first_name')
+        last  = validated_data.pop('last_name')
+
+        # Now create the user, passing first_name/last_name into create_user()
         user = User.objects.create_user(
-            username=validated_data['username'],
-            email=validated_data.get('email', ''),
-            password=validated_data['password']
+            first_name  = first,    # ─── pass first name here ───
+            last_name   = last,     # ─── pass last name here ───
+            username    = validated_data['username'],
+            email       = validated_data.get('email', ''),
+            password    = validated_data['password'],
         )
         return user

@@ -8,27 +8,48 @@ import {
   Alert,
   StyleSheet,
   Text,
-  TouchableOpacity
+  TouchableOpacity,
+  ActivityIndicator,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import * as SecureStore from 'expo-secure-store';
 import { client } from '../../api/client';
 
 /**
- * SignupScreen lets a new user register with username, email, and password.
- * On success, we automatically log them in by fetching a JWT and storing it.
+ * SignupScreen lets a new user register with:
+ *   - First Name
+ *   - Last Name
+ *   - Username
+ *   - Email
+ *   - Password
+ *   - Confirm Password
+ * On success, we immediately log them in by fetching a JWT and storing it.
  */
 export default function SignupScreen({ navigation }) {
+  const [firstName, setFirstName] = useState('');
+  const [lastName,  setLastName]  = useState('');
   const [username, setUsername] = useState('');
-  const [email, setEmail]       = useState('');
+  const [email,    setEmail]    = useState('');
   const [password, setPassword] = useState('');
   const [password2, setPassword2] = useState('');
-  const [loading, setLoading]   = useState(false);
+  const [loading,  setLoading]  = useState(false);
 
   const handleSignup = async () => {
-    if (!username.trim() || !email.trim() || !password || !password2) {
+    // 1) Validate that *all six* fields are filled
+    if (
+      !firstName.trim() ||
+      !lastName.trim()  ||
+      !username.trim()  ||
+      !email.trim()     ||
+      !password         ||
+      !password2
+    ) {
       Alert.alert('Missing fields', 'Please fill out all fields.');
       return;
     }
+
+    // 2) Ensure passwords match
     if (password !== password2) {
       Alert.alert('Passwords don’t match', 'Please re‐enter your passwords.');
       return;
@@ -36,33 +57,37 @@ export default function SignupScreen({ navigation }) {
 
     setLoading(true);
     try {
-      // 1) Register new user
+      // 3) Register new user with the extra first_name & last_name fields
       const registerRes = await client.post('register/', {
-        username,
-        email,
-        password,
-        password2,
+        first_name: firstName.trim(),
+        last_name:  lastName.trim(),
+        username:   username.trim(),
+        email:      email.trim().toLowerCase(),
+        password:   password,
+        password2:  password2,
       });
 
-      // If register was successful (HTTP 201), proceed to login:
+      // 4) If registration succeeded (HTTP 201), immediately log them in
       if (registerRes.status === 201) {
-        // 2) Immediately log them in (fetch JWT)
-        const tokenRes = await client.post('token/', { username, password });
+        const tokenRes = await client.post('token/', {
+          username: username.trim(),
+          password: password,
+        });
 
+        // 5) Store tokens securely
         await SecureStore.setItemAsync('accessToken', tokenRes.data.access);
         await SecureStore.setItemAsync('refreshToken', tokenRes.data.refresh);
 
-        // 3) Navigate to Groups (and replace so they can’t go back)
+        // 6) Navigate to Groups screen (replace so user cannot go back)
         navigation.replace('Groups');
       }
     } catch (err) {
-      setLoading(false);
-      // If the error is from DRF validation, err.response.data holds field errors:
+      // 7) Handle DRF validation errors (e.g. “username already taken”, etc.)
       if (err.response && err.response.data) {
         const errors = err.response.data;
-        // Flatten errors into a single string
         let msg = '';
         Object.keys(errors).forEach((field) => {
+          // Join any array of error strings for each field
           msg += `${field}: ${errors[field].join(' ')}\n`;
         });
         Alert.alert('Registration Error', msg.trim());
@@ -75,8 +100,28 @@ export default function SignupScreen({ navigation }) {
   };
 
   return (
-    <View style={styles.container}>
+    <KeyboardAvoidingView
+      style={styles.container}
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
+    >
       <Text style={styles.heading}>Create an Account</Text>
+
+      <TextInput
+        placeholder="First Name"
+        value={firstName}
+        onChangeText={setFirstName}
+        autoCapitalize="words"
+        style={styles.input}
+      />
+
+      <TextInput
+        placeholder="Last Name"
+        value={lastName}
+        onChangeText={setLastName}
+        autoCapitalize="words"
+        style={styles.input}
+      />
 
       <TextInput
         placeholder="Username"
@@ -111,11 +156,15 @@ export default function SignupScreen({ navigation }) {
         style={styles.input}
       />
 
-      <Button
-        title={loading ? 'Registering…' : 'Sign Up'}
-        onPress={handleSignup}
-        disabled={loading}
-      />
+      {loading ? (
+        <ActivityIndicator size="large" color="#E91E63" style={{ marginTop: 16 }} />
+      ) : (
+        <Button
+          title="Sign Up"
+          onPress={handleSignup}
+          color="#E91E63"
+        />
+      )}
 
       <View style={styles.footer}>
         <Text>Already have an account?</Text>
@@ -123,7 +172,7 @@ export default function SignupScreen({ navigation }) {
           <Text style={styles.loginLink}> Log In</Text>
         </TouchableOpacity>
       </View>
-    </View>
+    </KeyboardAvoidingView>
   );
 }
 
