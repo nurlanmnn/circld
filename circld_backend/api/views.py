@@ -62,6 +62,12 @@ class ExpenseViewSet(viewsets.ModelViewSet):
     serializer_class = ExpenseSerializer
     permission_classes = [permissions.IsAuthenticated]
 
+    def get_queryset(self):
+        return (
+            Expense.objects.select_related("paid_by", "group")
+            .filter(group__members=self.request.user)
+        )
+    
     def perform_create(self, serializer):
         serializer.save(paid_by=self.request.user)
 
@@ -70,6 +76,12 @@ class MessageViewSet(viewsets.ModelViewSet):
     serializer_class = MessageSerializer
     permission_classes = [permissions.IsAuthenticated]
 
+    def get_queryset(self):
+        return (
+            Message.objects.select_related("sender", "group")
+            .filter(group__members=self.request.user)
+        )
+        
     def perform_create(self, serializer):
         serializer.save(sender=self.request.user)
 
