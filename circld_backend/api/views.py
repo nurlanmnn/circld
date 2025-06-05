@@ -58,31 +58,30 @@ class GroupViewSet(viewsets.ModelViewSet):
         return Response(serializer.data, status=status.HTTP_200_OK)
 
 class ExpenseViewSet(viewsets.ModelViewSet):
-    queryset = Expense.objects.select_related('paid_by', 'group').all()
     serializer_class = ExpenseSerializer
     permission_classes = [permissions.IsAuthenticated]
 
     def get_queryset(self):
-        return (
-            Expense.objects.select_related("paid_by", "group")
-            .filter(group__members=self.request.user)
-        )
-    
+        group_id = self.request.query_params.get('group')
+        # only fetch expenses for that group
+        return Expense.objects.filter(group_id=group_id).order_by('-created')
+
     def perform_create(self, serializer):
+        # automatically set paid_by to the authenticated user
         serializer.save(paid_by=self.request.user)
 
+
 class MessageViewSet(viewsets.ModelViewSet):
-    queryset = Message.objects.select_related('sender', 'group').all()
     serializer_class = MessageSerializer
     permission_classes = [permissions.IsAuthenticated]
 
     def get_queryset(self):
-        return (
-            Message.objects.select_related("sender", "group")
-            .filter(group__members=self.request.user)
-        )
-        
+        group_id = self.request.query_params.get('group')
+        # only fetch messages for that group
+        return Message.objects.filter(group_id=group_id).order_by('ts')
+
     def perform_create(self, serializer):
+        # automatically set sender to the authenticated user
         serializer.save(sender=self.request.user)
 
 

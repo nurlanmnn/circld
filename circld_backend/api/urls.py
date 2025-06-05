@@ -17,5 +17,5 @@ router.register(r'messages', MessageViewSet, basename='message')
 
 urlpatterns = [
     path('', include(router.urls)),
-    path('register/', SignupView.as_view(), name='register'),  # ← new endpoint
+    path('register/', SignupView.as_view(), name='register'),
 ]

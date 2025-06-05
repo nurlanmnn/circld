@@ -24,20 +24,36 @@ class GroupSerializer(serializers.ModelSerializer):
         fields = ['id', 'name', 'members', 'invite_code']
 
 class ExpenseSerializer(serializers.ModelSerializer):
-    paid_by = serializers.PrimaryKeyRelatedField(read_only=True, default=serializers.CurrentUserDefault())
-    group   = serializers.PrimaryKeyRelatedField(queryset=Group.objects.all())
+    paid_by_username = serializers.CharField(source='paid_by.username', read_only=True)
 
     class Meta:
         model = Expense
-        fields = ['id', 'group', 'paid_by', 'amount', 'note', 'created']
+        fields = [
+            'id',
+            'group',
+            'paid_by',           # client can send group ID; we override paid_by in perform_create
+            'paid_by_username',  # read-only in response
+            'amount',
+            'note',
+            'created',
+        ]
+        read_only_fields = ['created', 'paid_by_username']
+
 
 class MessageSerializer(serializers.ModelSerializer):
-    sender = serializers.PrimaryKeyRelatedField(read_only=True, default=serializers.CurrentUserDefault())
-    group  = serializers.PrimaryKeyRelatedField(queryset=Group.objects.all())
+    sender_username = serializers.CharField(source='sender.username', read_only=True)
 
     class Meta:
         model = Message
-        fields = ['id', 'group', 'sender', 'text', 'ts']
+        fields = [
+            'id',
+            'group',
+            'sender',           # client can send group ID; we override sender in perform_create
+            'sender_username',  # read-only in response
+            'text',
+            'ts',
+        ]
+        read_only_fields = ['ts', 'sender_username']
 
 class SignupSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True, min_length=8)

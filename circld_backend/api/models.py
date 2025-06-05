@@ -31,14 +31,31 @@ class Group(models.Model):
         return self.name
 
 class Expense(models.Model):
-    group    = models.ForeignKey(Group, on_delete=models.CASCADE)
-    paid_by  = models.ForeignKey(User, on_delete=models.CASCADE)
-    amount   = models.DecimalField(max_digits=10, decimal_places=2)
-    note     = models.CharField(max_length=200, blank=True)
-    created  = models.DateTimeField(auto_now_add=True)
+    group   = models.ForeignKey('Group', on_delete=models.CASCADE, related_name='expenses')
+    paid_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        related_name='paid_expenses'
+    )
+    amount  = models.DecimalField(max_digits=10, decimal_places=2)
+    note    = models.CharField(max_length=255, blank=True)
+    created = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.paid_by.username if self.paid_by else 'Unknown'}: ${self.amount} {self.note}"
+
 
 class Message(models.Model):
-    group   = models.ForeignKey(Group, on_delete=models.CASCADE)
-    sender  = models.ForeignKey(User, on_delete=models.CASCADE)
-    text    = models.TextField()
-    ts      = models.DateTimeField(auto_now_add=True)
+    group  = models.ForeignKey('Group', on_delete=models.CASCADE, related_name='messages')
+    sender = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        related_name='sent_messages'
+    )
+    text = models.TextField()
+    ts   = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.sender.username if self.sender else 'Unknown'} @ {self.ts:%H:%M}: {self.text[:20]}"
