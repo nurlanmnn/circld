@@ -9,6 +9,11 @@ import {
   Text,
   Image,
   TouchableOpacity,
+  KeyboardAvoidingView,
+  Platform,
+  TouchableWithoutFeedback,
+  Keyboard,
+  ScrollView,
 } from 'react-native';
 import * as SecureStore from 'expo-secure-store';
 import { client } from '../../api/client';
@@ -43,43 +48,55 @@ export default function LoginScreen({ navigation }) {
   };
 
   return (
-    <View style={styles.container}>
-      <Image
-        source={require('../../../assets/logo_circld.png')}
-        style={styles.logo}
-        resizeMode="contain"
-      />
-      <TextInput
-        placeholder="Username"
-        value={username}
-        onChangeText={setUsername}
-        autoCapitalize="none"
-        style={styles.input}
-      />
-      <TextInput
-        placeholder="Password"
-        value={password}
-        onChangeText={setPassword}
-        secureTextEntry
-        style={styles.input}
-      />
+    <KeyboardAvoidingView
+      style={{ flex: 1 }}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+    >
+      <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+        <ScrollView
+          contentContainerStyle={styles.container}
+          keyboardShouldPersistTaps="handled"
+        >
+          <Image
+            source={require('../../../assets/logo_circld.png')}
+            style={styles.logo}
+            resizeMode="contain"
+          />
 
-      <Button title="Log In" onPress={login} />
+          <TextInput
+            placeholder="Username"
+            value={username}
+            onChangeText={setUsername}
+            autoCapitalize="none"
+            style={styles.input}
+          />
+          <TextInput
+            placeholder="Password"
+            value={password}
+            onChangeText={setPassword}
+            secureTextEntry
+            style={styles.input}
+          />
 
-      <View style={styles.footer}>
-        <Text>Don't have an account?</Text>
-        <TouchableOpacity onPress={() => navigation.replace('Signup')}>
-          <Text style={styles.signupLink}> Sign Up</Text>
-        </TouchableOpacity>
-      </View>
+          <View style={styles.buttonContainer}>
+            <Button title="Log In" onPress={login} />
+          </View>
 
-    </View>
+          <View style={styles.footer}>
+            <Text>Don't have an account?</Text>
+            <TouchableOpacity onPress={() => navigation.replace('Signup')}>
+              <Text style={styles.signupLink}> Sign Up</Text>
+            </TouchableOpacity>
+          </View>
+        </ScrollView>
+      </TouchableWithoutFeedback>
+    </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
-    flex: 1,
+    flexGrow: 1,
     justifyContent: 'center',
     paddingHorizontal: 16,
     backgroundColor: '#fff',
