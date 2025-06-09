@@ -7,10 +7,13 @@ import {
   Alert,
   StyleSheet,
   Text,
+  Image,
   TouchableOpacity,
 } from 'react-native';
 import * as SecureStore from 'expo-secure-store';
 import { client } from '../../api/client';
+import { Dimensions } from 'react-native';
+const { width } = Dimensions.get('window');
 
 export default function LoginScreen({ navigation }) {
   const [username, setUsername] = useState('');
@@ -41,6 +44,11 @@ export default function LoginScreen({ navigation }) {
 
   return (
     <View style={styles.container}>
+      <Image
+        source={require('../../../assets/logo_circld.png')}
+        style={styles.logo}
+        resizeMode="contain"
+      />
       <TextInput
         placeholder="Username"
         value={username}
@@ -75,6 +83,12 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingHorizontal: 16,
     backgroundColor: '#fff',
+  },
+  logo: {
+    width: width * 0.52,       // 60% of screen width
+    height: width * 0.52,      // keep it square
+    alignSelf: 'center',
+    marginBottom: 80,
   },
   input: {
     height: 50,
