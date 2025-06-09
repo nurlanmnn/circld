@@ -2,11 +2,13 @@
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
 from .views import (
+    ResendCodeView,
     UserViewSet,
     GroupViewSet,
     ExpenseViewSet,
     MessageViewSet,
-    SignupView,  # ← import the signup view
+    SignupView,
+    VerifyCodeView,
 )
 
 router = DefaultRouter()
@@ -18,4 +20,6 @@ router.register(r'messages', MessageViewSet, basename='message')
 urlpatterns = [
     path('', include(router.urls)),
     path('register/', SignupView.as_view(), name='register'),
+    path('verify-code/',  VerifyCodeView.as_view(),   name='verify-code'),
+    path('resend-code/',  ResendCodeView.as_view(),   name='resend-code'),
 ]

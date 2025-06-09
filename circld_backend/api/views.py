@@ -5,9 +5,15 @@ from django.shortcuts import render
 from rest_framework.response import Response
 from django.contrib.auth import get_user_model
 from rest_framework import viewsets, permissions, status, generics
-from .models import Group, Expense, Message
+from .models import Group, Expense, Message, Profile # last one is TEMP
 from .serializers import UserSerializer, GroupSerializer, ExpenseSerializer, MessageSerializer, SignupSerializer
 from rest_framework.decorators import action
+# TEMP below
+from rest_framework.views import APIView
+import random
+from rest_framework import generics
+from django.conf import settings
+from django.core.mail import send_mail
 
 User = get_user_model()
 
@@ -98,3 +104,63 @@ class SignupView(generics.GenericAPIView):
             user = serializer.save()
             return Response({"detail": "User created successfully."}, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+# TEMP
+class VerifyCodeView(APIView):
+    permission_classes = []  # allow unauthenticated
+
+    def post(self, request):
+        """
+        Expects JSON: { "email": "...", "code": "123456" }
+        """
+        email = request.data.get('email', '').lower()
+        code  = request.data.get('code', '').strip()
+
+        try:
+            profile = Profile.objects.get(user__email=email)
+        except Profile.DoesNotExist:
+            return Response(
+                {"error": "No such user."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        if profile.email_token != code:
+            return Response(
+                {"error": "Invalid verification code."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # mark user active and clear code
+        user = profile.user
+        user.is_active = True
+        user.save()
+        profile.email_token = ''
+        profile.save()
+
+        return Response({"message": "Email verified! You can now log in."})
+# TEMP
+
+class ResendCodeView(APIView):
+    permission_classes = []
+
+    def post(self, request):
+        email = request.data.get('email','').lower()
+        try:
+            profile = Profile.objects.get(user__email=email)
+        except Profile.DoesNotExist:
+            return Response({"error":"No such user."}, status=400)
+
+        if profile.user.is_active:
+            return Response({"error":"Already verified."}, status=400)
+
+        # new code
+        code = f"{random.randint(0,999999):06d}"
+        profile.email_token = code
+        profile.save()
+        send_mail(
+            subject    = "Your new Circld verification code",
+            message    = f"Your new code is {code}",
+            from_email = settings.DEFAULT_FROM_EMAIL,
+            recipient_list=[email], fail_silently=False,
+        )
+        return Response({"message":"New code sent."})

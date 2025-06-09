@@ -58,8 +58,10 @@ MIDDLEWARE = [
 
 CORS_ALLOWED_ORIGINS = [
   "http://localhost:19006",
-  "exp://127.0.0.1:19000",
+  "http://localhost:8081",
 ]
+
+CORS_ALLOW_CREDENTIALS = True
 
 AUTH_USER_MODEL = 'api.User'
 
@@ -154,3 +156,12 @@ SIMPLE_JWT = {
     'ACCESS_TOKEN_LIFETIME': datetime.timedelta(days=15),
     'REFRESH_TOKEN_LIFETIME': datetime.timedelta(days=15),
 }
+
+
+EMAIL_BACKEND       = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_HOST          = 'smtp.gmail.com'
+EMAIL_PORT          = 587
+EMAIL_USE_TLS       = True
+EMAIL_HOST_USER     = 'noreplycircld@gmail.com'      # real Gmail address
+EMAIL_HOST_PASSWORD = 'dcuq sxpw qnzs aoaa'         # Google “App password”
+DEFAULT_FROM_EMAIL  = 'Circld <noreplycircld@gmail.com>'

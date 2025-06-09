@@ -27,7 +27,15 @@ export default function LoginScreen({ navigation }) {
       await SecureStore.setItemAsync('refreshToken', data.refresh);
       navigation.replace('Groups');
     } catch (err) {
-      Alert.alert('Login failed', 'Check your credentials and try again.');
+      // If backend returns 401 (user not active/verified), show a special message
+      if (err.response?.status === 401) {
+          return Alert.alert(
+            'Email not verified',
+            'Please verify your email before logging in.'
+          );
+        }
+        // Fallback for other errors
+        Alert.alert('Login failed', 'Check your credentials and try again.');
     }
   };
 
@@ -86,3 +94,4 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
 });
+

@@ -51,7 +51,7 @@ export default function SignupScreen({ navigation }) {
 
     // 2) Ensure passwords match
     if (password !== password2) {
-      Alert.alert('Passwords don’t match', 'Please re‐enter your passwords.');
+      Alert.alert('Passwords don`t match', 'Please re-enter your passwords.');
       return;
     }
 
@@ -67,20 +67,11 @@ export default function SignupScreen({ navigation }) {
         password2:  password2,
       });
 
-      // 4) If registration succeeded (HTTP 201), immediately log them in
       if (registerRes.status === 201) {
-        const tokenRes = await client.post('token/', {
-          username: username.trim(),
-          password: password,
-        });
-
-        // 5) Store tokens securely
-        await SecureStore.setItemAsync('accessToken', tokenRes.data.access);
-        await SecureStore.setItemAsync('refreshToken', tokenRes.data.refresh);
-
-        // 6) Navigate to Groups screen (replace so user cannot go back)
-        navigation.replace('Groups');
-      }
+           // pass email so VerifyCodeScreen knows which account
+           navigation.replace('VerifyCode', { email: email.trim().toLowerCase() });
+         }
+      
     } catch (err) {
       // 7) Handle DRF validation errors (e.g. “username already taken”, etc.)
       if (err.response && err.response.data) {
@@ -88,7 +79,7 @@ export default function SignupScreen({ navigation }) {
         let msg = '';
         Object.keys(errors).forEach((field) => {
           // Join any array of error strings for each field
-          msg += `${field}: ${errors[field].join(' ')}\n`;
+          msg = `${field}: ${errors[field].join(' ')}\n`;
         });
         Alert.alert('Registration Error', msg.trim());
       } else {

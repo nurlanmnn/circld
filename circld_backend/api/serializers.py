@@ -1,7 +1,12 @@
 # api/serializers.py
 from django.contrib.auth import get_user_model
 from rest_framework import serializers
-from .models import Group, Expense, Message
+from .models import Group, Expense, Message, Profile #(last one TEMP)
+import random
+from django.utils.crypto import get_random_string
+from django.conf import settings
+from django.core.mail import send_mail
+
 
 User = get_user_model()
 
@@ -111,10 +116,33 @@ class SignupSerializer(serializers.ModelSerializer):
 
         # Now create the user, passing first_name/last_name into create_user()
         user = User.objects.create_user(
-            first_name  = first,    # ─── pass first name here ───
-            last_name   = last,     # ─── pass last name here ───
+            first_name  = first,
+            last_name   = last,
             username    = validated_data['username'],
             email       = validated_data.get('email', ''),
             password    = validated_data['password'],
+            is_active=False
         )
+
+        # generate & store one-time token
+        code = f"{random.randint(0, 999999):06d}"
+        user.profile.email_token = code
+        user.profile.save()
+
+        # send verification email
+        send_mail(
+            subject    = "Welcome to Circld! Here's your verification code",
+            message    = (
+                f"Hi {user.first_name},\n\n"
+                "Thank you for joining Circld! To finish setting up your account, please enter the code below in the app:\n\n"
+                f"    {code}\n\n"
+                "If you didn't sign up for Circld, you can safely ignore this message.\n\n"
+                "Cheers,\n"
+                "The Circld Team"
+            ),
+            from_email = settings.DEFAULT_FROM_EMAIL,
+            recipient_list=[user.email],
+            fail_silently=False,
+        )
+
         return user

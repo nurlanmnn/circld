@@ -9,4 +9,5 @@ djangorestframework_simplejwt==5.5.0
 msgpack==1.1.0
 PyJWT==2.9.0
 redis==6.2.0
+six==1.17.0
 sqlparse==0.5.3

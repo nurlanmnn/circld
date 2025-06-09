@@ -3,9 +3,26 @@ from django.contrib.auth.models import AbstractUser
 import uuid
 from django.db import models
 from django.conf import settings
+# TEMP
+from django.db.models.signals import post_save
+from django.dispatch import receiver
 
+# User = get_user_model()
 class User(AbstractUser):
     pass
+
+class Profile(models.Model):
+    user        = models.OneToOneField(User, on_delete=models.CASCADE)
+    email_token = models.CharField(max_length=64, blank=True)
+
+    def __str__(self):
+        return f"{self.user.username} Profile"
+
+@receiver(post_save, sender=User)
+def create_user_profile(sender, instance, created, **kwargs):
+    if created:
+        Profile.objects.create(user=instance)
+
 
 def generate_invite_code():
     # Use the first 8 characters of a UUID4 hex string.
