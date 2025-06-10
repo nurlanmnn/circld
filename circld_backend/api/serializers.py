@@ -6,7 +6,7 @@ import random
 from django.utils.crypto import get_random_string
 from django.conf import settings
 from django.core.mail import send_mail
-
+from rest_framework.validators import UniqueValidator
 
 User = get_user_model()
 
@@ -61,6 +61,16 @@ class MessageSerializer(serializers.ModelSerializer):
         read_only_fields = ['ts', 'sender_username']
 
 class SignupSerializer(serializers.ModelSerializer):
+    # Validate that email is unique across all User records
+    email = serializers.EmailField(
+        required=True,
+        validators=[
+            UniqueValidator(
+                queryset=User.objects.all(),
+                message="This email is already registered."
+            )
+        ]
+    )
     # Add two write-only fields: first_name and last_name.
     first_name = serializers.CharField(
         write_only=True,
