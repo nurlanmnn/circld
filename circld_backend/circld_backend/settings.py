@@ -161,6 +161,10 @@ SIMPLE_JWT = {
     'REFRESH_TOKEN_LIFETIME': datetime.timedelta(days=15),
 }
 
+AUTHENTICATION_BACKENDS = [
+    'api.authentication.EmailOrUsernameBackend',  
+    'django.contrib.auth.backends.ModelBackend',
+]
 
 EMAIL_BACKEND       = 'django.core.mail.backends.smtp.EmailBackend'
 EMAIL_HOST          = 'smtp.gmail.com'

@@ -26,7 +26,7 @@ export default function LoginScreen({ navigation }) {
 
   const login = async () => {
     if (!username.trim() || !password) {
-      Alert.alert('Missing fields', 'Enter both username and password.');
+      Alert.alert('Missing fields', 'Enter both username or email and password.');
       return;
     }
     try {
@@ -64,7 +64,7 @@ export default function LoginScreen({ navigation }) {
           />
 
           <TextInput
-            placeholder="Username"
+            placeholder="Username or Email"
             value={username}
             onChangeText={setUsername}
             autoCapitalize="none"
