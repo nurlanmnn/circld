@@ -156,3 +156,36 @@ class SignupSerializer(serializers.ModelSerializer):
         )
 
         return user
+    
+class ProfileSerializer(serializers.ModelSerializer):
+    # Map the related User fields onto the Profile payload
+    first_name = serializers.CharField(
+        source='user.first_name', required=False
+    )
+    last_name = serializers.CharField(
+        source='user.last_name', required=False
+    )
+    email = serializers.EmailField(
+        source='user.email', required=False
+    )
+    # Allow uploading/updating avatar image
+    avatar = serializers.ImageField(required=False)
+
+    class Meta:
+        model = Profile
+        fields = [
+            'first_name',
+            'last_name',
+            'email',
+            'avatar',
+        ]
+
+    def update(self, instance, validated_data):
+        # 1) Pop off any nested 'user' data
+        user_data = validated_data.pop('user', {})
+        # 2) Apply name/email changes to the related User
+        for attr, value in user_data.items():
+            setattr(instance.user, attr, value)
+        instance.user.save()
+        # 3) Let ModelSerializer handle the rest (i.e. avatar)
+        return super().update(instance, validated_data)

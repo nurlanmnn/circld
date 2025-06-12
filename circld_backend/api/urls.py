@@ -9,6 +9,8 @@ from .views import (
     MessageViewSet,
     SignupView,
     VerifyCodeView,
+    ProfileView,
+    DeleteAccountView,
 )
 
 router = DefaultRouter()
@@ -22,4 +24,6 @@ urlpatterns = [
     path('register/', SignupView.as_view(), name='register'),
     path('verify-code/',  VerifyCodeView.as_view(),   name='verify-code'),
     path('resend-code/',  ResendCodeView.as_view(),   name='resend-code'),
+    path('profile/',  ProfileView.as_view(), name='profile'),
+    path('profile/delete/',DeleteAccountView.as_view(), name='profile/delete'),
 ]

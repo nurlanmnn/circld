@@ -1,19 +1,19 @@
 from django.shortcuts import render
 
-# Create your views here.
-# api/views.py
 from rest_framework.response import Response
 from django.contrib.auth import get_user_model
 from rest_framework import viewsets, permissions, status, generics
-from .models import Group, Expense, Message, Profile # last one is TEMP
-from .serializers import UserSerializer, GroupSerializer, ExpenseSerializer, MessageSerializer, SignupSerializer
+from .models import Group, Expense, Message, Profile
+from .serializers import UserSerializer, GroupSerializer, ExpenseSerializer, MessageSerializer, SignupSerializer, ProfileSerializer
 from rest_framework.decorators import action
-# TEMP below
 from rest_framework.views import APIView
 import random
 from rest_framework import generics
 from django.conf import settings
 from django.core.mail import send_mail
+
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.parsers import MultiPartParser, FormParser
 
 User = get_user_model()
 
@@ -164,3 +164,33 @@ class ResendCodeView(APIView):
             recipient_list=[email], fail_silently=False,
         )
         return Response({"message":"New code sent."})
+
+class ProfileView(APIView):
+    permission_classes = [IsAuthenticated]
+    parser_classes     = [MultiPartParser, FormParser]
+
+    def get(self, request):
+        serializer = ProfileSerializer(
+            request.user.profile,
+            context={'request': request}
+        )
+        return Response(serializer.data)
+
+    def put(self, request):
+        serializer = ProfileSerializer(
+            request.user.profile,
+            data=request.data,
+            partial=True,
+            context={'request': request}
+        )
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+class DeleteAccountView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def delete(self, request):
+        request.user.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)

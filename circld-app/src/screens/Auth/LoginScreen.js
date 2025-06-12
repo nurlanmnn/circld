@@ -33,7 +33,7 @@ export default function LoginScreen({ navigation }) {
       const { data } = await client.post('token/', { username, password });
       await SecureStore.setItemAsync('accessToken', data.access);
       await SecureStore.setItemAsync('refreshToken', data.refresh);
-      navigation.replace('Groups');
+      navigation.replace('Main'); // temp
     } catch (err) {
       // If backend returns 401 (user not active/verified), show a special message
       if (err.response?.status === 401) {

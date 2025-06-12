@@ -32,7 +32,7 @@ export default function VerifyCodeScreen({ route, navigation }) {
     try {
       const { data } = await client.post('verify-code/', { email, code });
       Alert.alert('Success', data.message, [
-        { text: 'OK', onPress: () => navigation.replace('Login') }
+        { text: 'OK', onPress: () => navigation.replace('Main') }
       ]);
     } catch (err) {
       Alert.alert('Error', err.response?.data?.error || 'Try again.');

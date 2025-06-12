@@ -176,3 +176,9 @@ DEFAULT_FROM_EMAIL  = os.environ.get(
     'DEFAULT_FROM_EMAIL',
     'Circld <noreplycircld@gmail.com>'
 )
+
+
+BASE_DIR = Path(__file__).resolve().parent.parent
+
+MEDIA_URL  = '/media/'
+MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
