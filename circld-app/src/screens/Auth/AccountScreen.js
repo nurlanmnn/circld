@@ -95,6 +95,28 @@ export default function AccountScreen({ navigation }) {
   }
 
   const handleSave = async () => {
+      // if email changed → trigger request-change flow
+    if (email !== profile.email) {
+      try {
+        const { data } = await client.post(
+          'profile/request-email-change/',
+          { email }
+        );
+        Alert.alert(
+          'Verify New Email',
+          data.message,
+          [{ text:'OK', onPress: () =>
+              navigation.navigate('VerifyEmailChange', { from:'Account' })
+          }]
+        );
+        return;
+      } catch (err) {
+        return Alert.alert(
+          'Error',
+          err.response?.data?.email?.join(' ') || 'Could not send code.'
+        );
+      }
+    }
     setSaving(true);
     const formData = new FormData();
     formData.append('first_name', firstName);

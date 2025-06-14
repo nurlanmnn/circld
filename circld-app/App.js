@@ -8,6 +8,7 @@ import LoginScreen       from './src/screens/Auth/LoginScreen';
 import SignupScreen      from './src/screens/Auth/SignupScreen';
 import VerifyCodeScreen  from './src/screens/Auth/VerifyCodeScreen';
 import AppTabs           from './src/navigation/AppTabs';
+import VerifyEmailChangeScreen from './src/screens/Auth/VerifyEmailChangeScreen';
 
 const RootStack = createNativeStackNavigator();
 const queryClient = new QueryClient();
@@ -23,6 +24,11 @@ export default function App() {
           <RootStack.Screen name="VerifyCode" component={VerifyCodeScreen} />
           {/* Main app */}
           <RootStack.Screen name="Main"       component={AppTabs} />
+          <RootStack.Screen
+            name="VerifyEmailChange"
+            component={VerifyEmailChangeScreen}
+            options={{ headerShown:false }}
+          />
         </RootStack.Navigator>
       </NavigationContainer>
     </QueryClientProvider>

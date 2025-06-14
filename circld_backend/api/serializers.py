@@ -189,3 +189,20 @@ class ProfileSerializer(serializers.ModelSerializer):
         instance.user.save()
         # 3) Let ModelSerializer handle the rest (i.e. avatar)
         return super().update(instance, validated_data)
+
+class RequestEmailChangeSerializer(serializers.Serializer):
+    email = serializers.EmailField(
+        validators=[
+            UniqueValidator(
+                queryset=User.objects.all(),
+                message="That email is already in use."
+            )
+        ]
+    )
+
+class VerifyEmailChangeSerializer(serializers.Serializer):
+    code = serializers.CharField(
+        max_length=6,
+        min_length=6,
+        trim_whitespace=True
+    )

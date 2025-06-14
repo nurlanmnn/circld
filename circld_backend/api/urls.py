@@ -11,6 +11,8 @@ from .views import (
     VerifyCodeView,
     ProfileView,
     DeleteAccountView,
+    RequestEmailChangeView, 
+    VerifyEmailChangeView,
 )
 
 router = DefaultRouter()
@@ -26,4 +28,6 @@ urlpatterns = [
     path('resend-code/',  ResendCodeView.as_view(),   name='resend-code'),
     path('profile/',  ProfileView.as_view(), name='profile'),
     path('profile/delete/',DeleteAccountView.as_view(), name='profile/delete'),
+    path('profile/request-email-change/', RequestEmailChangeView.as_view()),
+    path('profile/verify-email-change/',  VerifyEmailChangeView .as_view()),
 ]

@@ -4,7 +4,15 @@ from rest_framework.response import Response
 from django.contrib.auth import get_user_model
 from rest_framework import viewsets, permissions, status, generics
 from .models import Group, Expense, Message, Profile
-from .serializers import UserSerializer, GroupSerializer, ExpenseSerializer, MessageSerializer, SignupSerializer, ProfileSerializer
+from .serializers import (
+    UserSerializer, 
+    GroupSerializer, 
+    ExpenseSerializer, 
+    MessageSerializer, 
+    SignupSerializer, 
+    ProfileSerializer, 
+    RequestEmailChangeSerializer,
+    VerifyEmailChangeSerializer )
 from rest_framework.decorators import action
 from rest_framework.views import APIView
 import random
@@ -194,3 +202,59 @@ class DeleteAccountView(APIView):
     def delete(self, request):
         request.user.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+class RequestEmailChangeView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request):
+        serializer = RequestEmailChangeSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        new_email = serializer.validated_data['email'].lower()
+        code = f"{random.randint(0, 999999):06d}"
+
+        profile = request.user.profile
+        profile.pending_email = new_email
+        profile.email_token   = code
+        profile.save()
+
+        send_mail(
+            subject="Verify your new Circld email",
+            message=f"Your verification code is {code}",
+            from_email=settings.DEFAULT_FROM_EMAIL,
+            recipient_list=[new_email],
+            fail_silently=False,
+        )
+        return Response(
+            {"message": "Verification code sent to new address."},
+            status=status.HTTP_200_OK
+        )
+
+
+class VerifyEmailChangeView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request):
+        serializer = VerifyEmailChangeSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        code = serializer.validated_data['code']
+        profile = request.user.profile
+
+        if profile.email_token != code:
+            return Response(
+                {"code": "Invalid code."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # commit the change
+        request.user.email       = profile.pending_email
+        request.user.save()
+        profile.pending_email    = ''
+        profile.email_token      = ''
+        profile.save()
+
+        return Response(
+            {"message": "Email updated successfully."},
+            status=status.HTTP_200_OK
+        )
