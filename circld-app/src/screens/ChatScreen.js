@@ -1,5 +1,3 @@
-// circld-app/src/screens/ChatScreen.js
-
 import React, { useState, useRef, useEffect } from 'react';
 import {
   View,
@@ -13,15 +11,18 @@ import {
   Platform,
   Alert,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { client } from '../api/client';
+import { client }      from '../api/client';
+import * as Clipboard  from 'expo-clipboard';
 
 export default function ChatScreen({ route, navigation }) {
   const { groupId, name } = route.params;
-  const queryClient = useQueryClient();
+  const queryClient      = useQueryClient();
   const [messageText, setMessageText] = useState('');
-  const [loading, setLoading] = useState(false);
-  const flatListRef = useRef(null);
+  const [loading, setLoading]         = useState(false);
+  const flatListRef      = useRef(null);
+  const insets           = useSafeAreaInsets();
 
   // 1) Poll messages every 3 seconds
   const {
@@ -30,8 +31,9 @@ export default function ChatScreen({ route, navigation }) {
     error: messageError,
   } = useQuery({
     queryKey: ['messages', groupId],
-    queryFn: () => client.get(`messages/?group=${groupId}`).then(res => res.data),
-    refetchInterval: 3000, // poll interval
+    queryFn: () =>
+      client.get(`messages/?group=${groupId}`).then(res => res.data),
+    refetchInterval: 3000,
   });
 
   // 2) Mutation to send a new message
@@ -45,8 +47,7 @@ export default function ChatScreen({ route, navigation }) {
 
   const handleSend = () => {
     if (!messageText.trim()) {
-      Alert.alert('Validation', 'Message cannot be empty.');
-      return;
+      return Alert.alert('Validation', 'Message cannot be empty.');
     }
     setLoading(true);
 
@@ -55,19 +56,18 @@ export default function ChatScreen({ route, navigation }) {
       {
         onError: err => {
           setLoading(false);
-          if (err.response && err.response.data) {
+          const data = err.response?.data;
+          if (data) {
             let msg = '';
-            Object.keys(err.response.data).forEach(field => {
-              msg += `${field}: ${err.response.data[field].join(' ')}\n`;
+            Object.keys(data).forEach(key => {
+              msg += `${key}: ${data[key].join(' ')}\n`;
             });
             Alert.alert('Send Failed', msg.trim());
           } else {
             Alert.alert('Send Failed', 'Please try again.');
           }
         },
-        onSettled: () => {
-          setLoading(false);
-        },
+        onSettled: () => setLoading(false),
       }
     );
   };
@@ -79,8 +79,12 @@ export default function ChatScreen({ route, navigation }) {
     }
   }, [messages]);
 
-  if (loadingMsg) return <ActivityIndicator size="large" color="#E91E63" />;
-  if (messageError) return <Text style={styles.message}>Failed to load messages.</Text>;
+  if (loadingMsg) {
+    return <ActivityIndicator size="large" color="#E91E63" />;
+  }
+  if (messageError) {
+    return <Text style={styles.message}>Failed to load messages.</Text>;
+  }
 
   return (
     <KeyboardAvoidingView
@@ -103,10 +107,14 @@ export default function ChatScreen({ route, navigation }) {
             </Text>
           </View>
         )}
-        ListEmptyComponent={<Text style={styles.message}>No messages yet.</Text>}
+        ListEmptyComponent={
+          <Text style={styles.message}>No messages yet.</Text>
+        }
+        // add extra bottom margin so list scrolls above the input bar + inset
+        style={{ marginBottom: insets.bottom }}
       />
 
-      <View style={styles.inputContainer}>
+      <View style={[styles.inputContainer, { paddingBottom: insets.bottom }]}>
         <TextInput
           placeholder="Type a message…"
           value={messageText}
@@ -124,27 +132,22 @@ export default function ChatScreen({ route, navigation }) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#fff', padding: 12 },
-  heading: {
+  container:      { flex: 1, backgroundColor: '#fff', padding: 12 },
+  heading:        {
     fontSize: 20,
     fontWeight: '600',
     textAlign: 'center',
     marginBottom: 12,
   },
-  msgItem: {
+  msgItem:        {
     marginBottom: 12,
     backgroundColor: '#f1f1f1',
     padding: 8,
     borderRadius: 6,
   },
-  msgSender: {
-    fontWeight: 'bold',
-    marginBottom: 4,
-  },
-  msgText: {
-    fontSize: 16,
-  },
-  msgDate: {
+  msgSender:      { fontWeight: 'bold', marginBottom: 4 },
+  msgText:        { fontSize: 16 },
+  msgDate:        {
     fontSize: 10,
     color: '#666',
     textAlign: 'right',
@@ -156,8 +159,9 @@ const styles = StyleSheet.create({
     borderTopColor: '#ddd',
     borderTopWidth: 1,
     paddingTop: 8,
+    // bottom inset applied dynamically
   },
-  input: {
+  input:          {
     flex: 1,
     height: 40,
     borderColor: '#ccc',
@@ -166,7 +170,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     marginRight: 8,
   },
-  message: {
+  message:        {
     textAlign: 'center',
     marginTop: 40,
     fontSize: 16,

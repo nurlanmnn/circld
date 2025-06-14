@@ -1,5 +1,3 @@
-// circld-app/src/screens/ExpensesScreen.js
-
 import React, { useState } from 'react';
 import {
   View,
@@ -13,14 +11,17 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { client } from '../api/client';
 
 export default function ExpensesScreen({ route, navigation }) {
   const { groupId, name } = route.params;
-  const queryClient = useQueryClient();
+  const queryClient      = useQueryClient();
+  const insets           = useSafeAreaInsets();                    // ← call
+
   const [amount, setAmount] = useState('');
-  const [note, setNote]       = useState('');
+  const [note, setNote]     = useState('');
   const [loading, setLoading] = useState(false);
 
   // 1) Fetch expenses for this group
@@ -60,7 +61,7 @@ export default function ExpensesScreen({ route, navigation }) {
       {
         onError: err => {
           setLoading(false);
-          if (err.response && err.response.data) {
+          if (err.response?.data) {
             let msg = '';
             Object.keys(err.response.data).forEach(field => {
               msg += `${field}: ${err.response.data[field].join(' ')}\n`;
@@ -70,15 +71,25 @@ export default function ExpensesScreen({ route, navigation }) {
             Alert.alert('Add Expense Failed', 'Please try again.');
           }
         },
-        onSettled: () => {
-          setLoading(false);
-        }
+        onSettled: () => setLoading(false),
       }
     );
   };
 
-  if (loadingExp) return <ActivityIndicator size="large" color="#E91E63" />;
-  if (expenseError) return <Text style={styles.message}>Failed to load expenses.</Text>;
+  if (loadingExp) {
+    return (
+      <View style={styles.centered}>
+        <ActivityIndicator size="large" color="#E91E63" />
+      </View>
+    );
+  }
+  if (expenseError) {
+    return (
+      <View style={styles.centered}>
+        <Text style={styles.message}>Failed to load expenses.</Text>
+      </View>
+    );
+  }
 
   return (
     <KeyboardAvoidingView
@@ -103,10 +114,11 @@ export default function ExpensesScreen({ route, navigation }) {
           </View>
         )}
         ListEmptyComponent={<Text style={styles.message}>No expenses yet.</Text>}
-        style={{ marginBottom: 20 }}
+        // ↑ make room for the form + safe area at the bottom
+        style={{ marginBottom: 20 + insets.bottom }}
       />
 
-      <View style={styles.form}>
+      <View style={[styles.form, { paddingBottom: insets.bottom }]}>
         <TextInput
           placeholder="Amount (e.g. 12.50)"
           value={amount}
@@ -131,29 +143,17 @@ export default function ExpensesScreen({ route, navigation }) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#fff', padding: 16 },
-  heading: {
-    fontSize: 20,
-    fontWeight: '600',
-    marginBottom: 12,
-    textAlign: 'center',
-  },
-  expenseItem: {
-    paddingVertical: 8,
-    borderBottomColor: '#eee',
-    borderBottomWidth: 1,
-  },
-  expenseText: {
-    fontSize: 16,
-  },
-  expenseDate: {
-    fontSize: 12,
-    color: '#999',
-  },
+  container:    { flex: 1, backgroundColor: '#fff', padding: 16 },
+  heading:      { fontSize: 20, fontWeight: '600', marginBottom: 12, textAlign: 'center' },
+  centered:     { flex: 1, justifyContent: 'center', alignItems: 'center' },
+  expenseItem:  { paddingVertical: 8, borderBottomColor: '#eee', borderBottomWidth: 1 },
+  expenseText:  { fontSize: 16 },
+  expenseDate:  { fontSize: 12, color: '#999' },
   form: {
     borderTopColor: '#ddd',
     borderTopWidth: 1,
     paddingTop: 12,
+    // bottom padding is now added dynamically via insets
   },
   input: {
     height: 44,

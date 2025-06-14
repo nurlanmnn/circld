@@ -15,6 +15,7 @@ import { useQuery }   from '@tanstack/react-query';
 import * as Clipboard  from 'expo-clipboard';
 import { Ionicons }    from '@expo/vector-icons';
 import { useTheme }    from '@react-navigation/native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { client }      from '../api/client';
 
 export default function GroupDetail({ route, navigation }) {
@@ -22,6 +23,7 @@ export default function GroupDetail({ route, navigation }) {
   const theme       = useTheme();
   const tint        = theme.colors.primary;
   const { width }   = useWindowDimensions();
+  const insets     = useSafeAreaInsets();  
 
   // 1) Fetch the single group (including invite_code)
   const {
@@ -72,7 +74,11 @@ export default function GroupDetail({ route, navigation }) {
 
   return (
     <View style={styles.container}>
-      <ScrollView contentContainerStyle={styles.scrollContent}>
+      <ScrollView contentContainerStyle={[
+        styles.scrollContent,
+        // make sure ScrollView can scroll past the footer + inset
+        { paddingBottom: 100 + insets.bottom }
+        ]}>
         {/* Group Name */}
         <Text style={styles.groupName}>{group.name}</Text>
 
@@ -92,7 +98,16 @@ export default function GroupDetail({ route, navigation }) {
       </ScrollView>
 
       {/* Footer Bar with Icons */}
-      <View style={styles.footer}>
+      <View style={[
+        styles.footer,
+        {
+          // raise footer above the home indicator
+          paddingBottom: insets.bottom,
+          height: 55 + insets.bottom // this adjusts height of footer from up
+        }
+        ]}
+        pointerEvents="box-none"
+      >
         {/* Expenses Button */}
         <TouchableOpacity
           style={styles.footerButton}
@@ -186,20 +201,20 @@ const styles = StyleSheet.create({
     color: '#D32F2F',
     fontSize: 16,
   },
-  footer: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    height: 70,
-    flexDirection: 'row',
-    borderTopColor: '#ddd',
-    borderTopWidth: 1,
-    backgroundColor: '#fff',
-    paddingHorizontal: 24,
-    paddingVertical: 8,
-    justifyContent: 'space-around',
-    alignItems: 'center',
+  footer:       {
+    position:   'absolute',
+    bottom:     0,
+    left:       0,
+    right:      0,
+    flexDirection:'row',
+    borderTopColor:'#ddd',
+    borderTopWidth:1,
+    backgroundColor:'#fff',
+    paddingHorizontal:24,
+    paddingVertical:8,
+    justifyContent:'space-around',
+    alignItems:'center',
+    // height is controlled dynamically 
   },
   footerButton: {
     flex: 1,
@@ -207,6 +222,6 @@ const styles = StyleSheet.create({
   },
   footerLabel: {
     fontSize: 12,
-    marginTop: 4,
+    marginTop: 3,
   },
 });
