@@ -8,16 +8,20 @@ import {
   Alert,
   TouchableOpacity,
   StyleSheet,
-  Platform,
   ScrollView,
+  useWindowDimensions,
 } from 'react-native';
-import { useQuery } from '@tanstack/react-query';
-import * as Clipboard from 'expo-clipboard';
-import { Ionicons } from '@expo/vector-icons';
-import { client } from '../api/client';
+import { useQuery }   from '@tanstack/react-query';
+import * as Clipboard  from 'expo-clipboard';
+import { Ionicons }    from '@expo/vector-icons';
+import { useTheme }    from '@react-navigation/native';
+import { client }      from '../api/client';
 
 export default function GroupDetail({ route, navigation }) {
   const { groupId } = route.params;
+  const theme       = useTheme();
+  const tint        = theme.colors.primary;
+  const { width }   = useWindowDimensions();
 
   // 1) Fetch the single group (including invite_code)
   const {
@@ -32,13 +36,13 @@ export default function GroupDetail({ route, navigation }) {
   if (isLoading) {
     return (
       <View style={styles.centered}>
-        <ActivityIndicator size="large" color="#E91E63" />
+        <ActivityIndicator size="large" color={tint} />
       </View>
     );
   }
 
   if (error) {
-    if (error.response && error.response.status === 404) {
+    if (error.response?.status === 404) {
       Alert.alert(
         'Not Found',
         'You are not authorized to view this group or it does not exist.',
@@ -57,7 +61,10 @@ export default function GroupDetail({ route, navigation }) {
   const copyInviteCode = async () => {
     try {
       await Clipboard.setStringAsync(group.invite_code);
-      Alert.alert('Invite Code Copied', `Code "${group.invite_code}" copied to clipboard.`);
+      Alert.alert(
+        'Invite Code Copied',
+        `Code "${group.invite_code}" copied to clipboard.`
+      );
     } catch {
       Alert.alert('Error', 'Failed to copy invite code.');
     }
@@ -73,12 +80,15 @@ export default function GroupDetail({ route, navigation }) {
         <Text style={styles.label}>Invite Code:</Text>
         <View style={styles.codeContainer}>
           <Text style={styles.codeText}>{group.invite_code}</Text>
-          <TouchableOpacity onPress={copyInviteCode} style={styles.copyButton}>
-            <Text style={styles.copyButtonText}>Copy</Text>
+          <TouchableOpacity
+            onPress={copyInviteCode}
+            style={[styles.copyButton, { backgroundColor: tint }]}
+          >
+            <Ionicons name="copy-outline" size={20} color="#fff" />
           </TouchableOpacity>
         </View>
 
-        {/* You can add more “group detail” info here if desired (e.g. list of members, etc.) */}
+        {/* …other group detail info… */}
       </ScrollView>
 
       {/* Footer Bar with Icons */}
@@ -86,19 +96,37 @@ export default function GroupDetail({ route, navigation }) {
         {/* Expenses Button */}
         <TouchableOpacity
           style={styles.footerButton}
-          onPress={() => navigation.navigate('Expenses', { groupId, name: group.name })}
+          onPress={() =>
+            navigation.navigate('Expenses', {
+              groupId,
+              name: group.name,
+            })
+          }
         >
-          <Ionicons name="cash-outline" size={28} color="#E91E63" />
-          <Text style={styles.footerLabel}>Expenses</Text>
+          <Ionicons name="cash-outline" size={28} color={tint} />
+          <Text style={[styles.footerLabel, { color: tint }]}>
+            Expenses
+          </Text>
         </TouchableOpacity>
 
         {/* Chat Button */}
         <TouchableOpacity
           style={styles.footerButton}
-          onPress={() => navigation.navigate('Chat', { groupId, name: group.name })}
+          onPress={() =>
+            navigation.navigate('Chat', {
+              groupId,
+              name: group.name,
+            })
+          }
         >
-          <Ionicons name="chatbubble-ellipses-outline" size={28} color="#E91E63" />
-          <Text style={styles.footerLabel}>Chat</Text>
+          <Ionicons
+            name="chatbubble-ellipses-outline"
+            size={28}
+            color={tint}
+          />
+          <Text style={[styles.footerLabel, { color: tint }]}>
+            Chat
+          </Text>
         </TouchableOpacity>
       </View>
     </View>
@@ -147,21 +175,17 @@ const styles = StyleSheet.create({
   },
   copyButton: {
     marginLeft: 12,
-    backgroundColor: '#E91E63',
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderRadius: 6,
   },
   copyButtonText: {
-    color: '#fff',
-    fontWeight: '600',
+    // no longer used
   },
   errorText: {
     color: '#D32F2F',
     fontSize: 16,
   },
-
-  // ----- Footer Styling -----
   footer: {
     position: 'absolute',
     bottom: 0,
@@ -183,7 +207,6 @@ const styles = StyleSheet.create({
   },
   footerLabel: {
     fontSize: 12,
-    color: '#E91E63',
     marginTop: 4,
   },
 });
