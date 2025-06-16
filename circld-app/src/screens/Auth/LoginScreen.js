@@ -18,11 +18,14 @@ import {
 import * as SecureStore from 'expo-secure-store';
 import { client } from '../../api/client';
 import { Dimensions } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+
 const { width } = Dimensions.get('window');
 
 export default function LoginScreen({ navigation }) {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false); 
 
   const login = async () => {
     if (!username.trim() || !password) {
@@ -70,13 +73,27 @@ export default function LoginScreen({ navigation }) {
             autoCapitalize="none"
             style={styles.input}
           />
-          <TextInput
-            placeholder="Password"
-            value={password}
-            onChangeText={setPassword}
-            secureTextEntry
-            style={styles.input}
-          />
+
+          <View style={styles.inputContainer}>
+            <TextInput
+              placeholder="Password"
+              value={password}
+              onChangeText={setPassword}
+              secureTextEntry={!showPassword}
+              style={[styles.input, { paddingRight: 40 }]}
+            />
+            <TouchableOpacity
+              onPress={() => setShowPassword(s => !s)}
+              style={styles.eyeButton}
+            >
+              <Ionicons
+                name={showPassword ? 'eye-off-outline' : 'eye-outline'}
+                size={20}
+                color="#888"
+              />
+            </TouchableOpacity>
+          </View>
+
           <TouchableOpacity
             style={styles.forgotLinkContainer}
             onPress={() => navigation.navigate('ForgotPassword')}
@@ -121,6 +138,12 @@ const styles = StyleSheet.create({
     borderRadius: 5,
     marginBottom: 12,
     paddingHorizontal: 10,
+  },
+  eyeButton: {
+    position: 'absolute',
+    right: 16,
+    top: 15,
+    padding: 4,
   },
   forgotLinkContainer: {
     alignSelf:    'flex-end',

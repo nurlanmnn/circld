@@ -1,3 +1,4 @@
+// email change in profile section (account)
 import React, { useState } from 'react';
 import {
   View, Text, TextInput, Button, Alert, StyleSheet, ActivityIndicator

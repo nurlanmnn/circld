@@ -1,4 +1,4 @@
-// circld-app/src/screens/Auth/SignupScreen.js
+// src/screens/Auth/SignupScreen.js
 
 import React, { useState } from 'react';
 import {
@@ -13,73 +13,61 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import * as SecureStore from 'expo-secure-store';
 import { client } from '../../api/client';
 
-/**
- * SignupScreen lets a new user register with:
- *   - First Name
- *   - Last Name
- *   - Username
- *   - Email
- *   - Password
- *   - Confirm Password
- * On success, we immediately log them in by fetching a JWT and storing it.
- */
 export default function SignupScreen({ navigation }) {
-  const [firstName, setFirstName] = useState('');
-  const [lastName,  setLastName]  = useState('');
-  const [username, setUsername] = useState('');
-  const [email,    setEmail]    = useState('');
-  const [password, setPassword] = useState('');
-  const [password2, setPassword2] = useState('');
-  const [loading,  setLoading]  = useState(false);
+  const [firstName, setFirstName]   = useState('');
+  const [lastName, setLastName]     = useState('');
+  const [username, setUsername]     = useState('');
+  const [email, setEmail]           = useState('');
+  const [password, setPassword]     = useState('');
+  const [password2, setPassword2]   = useState('');
+  const [showPassword, setShowPassword]   = useState(false);
+  const [showPassword2, setShowPassword2] = useState(false);
+  const [loading, setLoading]       = useState(false);
 
   const handleSignup = async () => {
-    // 1) Validate that *all six* fields are filled
     if (
       !firstName.trim() ||
-      !lastName.trim()  ||
-      !username.trim()  ||
-      !email.trim()     ||
-      !password         ||
+      !lastName.trim() ||
+      !username.trim() ||
+      !email.trim() ||
+      !password ||
       !password2
     ) {
-      Alert.alert('Missing fields', 'Please fill out all fields.');
-      return;
+      return Alert.alert('Missing fields', 'Please fill out all fields.');
     }
-
-    // 2) Ensure passwords match
     if (password !== password2) {
-      Alert.alert('Passwords don`t match', 'Please re-enter your passwords.');
-      return;
+      return Alert.alert('Passwords don’t match', 'Please re‐enter your passwords.');
     }
 
     setLoading(true);
     try {
-      // 3) Register new user with the extra first_name & last_name fields
       const registerRes = await client.post('register/', {
         first_name: firstName.trim(),
         last_name:  lastName.trim(),
         username:   username.trim(),
         email:      email.trim().toLowerCase(),
-        password:   password,
-        password2:  password2,
+        password,
+        password2,
       });
 
       if (registerRes.status === 201) {
-           // pass email so VerifyCodeScreen knows which account
-           navigation.replace('VerifyCode', { email: email.trim().toLowerCase() });
-         }
-      
+        const tokenRes = await client.post('token/', {
+          username: username.trim(),
+          password,
+        });
+        await SecureStore.setItemAsync('accessToken', tokenRes.data.access);
+        await SecureStore.setItemAsync('refreshToken', tokenRes.data.refresh);
+        navigation.replace('Groups');
+      }
     } catch (err) {
-      // 7) Handle DRF validation errors (e.g. “username already taken”, etc.)
-      if (err.response && err.response.data) {
-        const errors = err.response.data;
+      if (err.response?.data) {
         let msg = '';
-        Object.keys(errors).forEach((field) => {
-          // Join any array of error strings for each field
-          msg = `${field}: ${errors[field].join(' ')}\n`;
+        Object.keys(err.response.data).forEach(field => {
+          msg += `${field}: ${err.response.data[field].join(' ')}\n`;
         });
         Alert.alert('Registration Error', msg.trim());
       } else {
@@ -97,7 +85,6 @@ export default function SignupScreen({ navigation }) {
       keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
     >
       <Text style={styles.heading}>Create an Account</Text>
-
       <TextInput
         placeholder="First Name"
         value={firstName}
@@ -105,7 +92,6 @@ export default function SignupScreen({ navigation }) {
         autoCapitalize="words"
         style={styles.input}
       />
-
       <TextInput
         placeholder="Last Name"
         value={lastName}
@@ -113,7 +99,6 @@ export default function SignupScreen({ navigation }) {
         autoCapitalize="words"
         style={styles.input}
       />
-
       <TextInput
         placeholder="Username"
         value={username}
@@ -121,7 +106,6 @@ export default function SignupScreen({ navigation }) {
         autoCapitalize="none"
         style={styles.input}
       />
-
       <TextInput
         placeholder="Email"
         value={email}
@@ -131,30 +115,52 @@ export default function SignupScreen({ navigation }) {
         style={styles.input}
       />
 
-      <TextInput
-        placeholder="Password"
-        value={password}
-        onChangeText={setPassword}
-        secureTextEntry
-        style={styles.input}
-      />
+      {/* Password field with toggle */}
+      <View style={styles.inputContainer}>
+        <TextInput
+          placeholder="Password"
+          value={password}
+          onChangeText={setPassword}
+          secureTextEntry={!showPassword}
+          style={[styles.input, { paddingRight: 40 }]}
+        />
+        <TouchableOpacity
+          onPress={() => setShowPassword(s => !s)}
+          style={styles.eyeButton}
+        >
+          <Ionicons
+            name={showPassword ? 'eye-off-outline' : 'eye-outline'}
+            size={20}
+            color="#888"
+          />
+        </TouchableOpacity>
+      </View>
 
-      <TextInput
-        placeholder="Confirm Password"
-        value={password2}
-        onChangeText={setPassword2}
-        secureTextEntry
-        style={styles.input}
-      />
+      {/* Confirm password with toggle */}
+      <View style={styles.inputContainer}>
+        <TextInput
+          placeholder="Confirm Password"
+          value={password2}
+          onChangeText={setPassword2}
+          secureTextEntry={!showPassword2}
+          style={[styles.input, { paddingRight: 40 }]}
+        />
+        <TouchableOpacity
+          onPress={() => setShowPassword2(s => !s)}
+          style={styles.eyeButton}
+        >
+          <Ionicons
+            name={showPassword2 ? 'eye-off-outline' : 'eye-outline'}
+            size={20}
+            color="#888"
+          />
+        </TouchableOpacity>
+      </View>
 
       {loading ? (
         <ActivityIndicator size="large" color="#E91E63" style={{ marginTop: 16 }} />
       ) : (
-        <Button
-          title="Sign Up"
-          onPress={handleSignup}
-          color="#E91E63"
-        />
+        <Button title="Sign Up" onPress={handleSignup} color="#E91E63" />
       )}
 
       <View style={styles.footer}>
@@ -168,33 +174,43 @@ export default function SignupScreen({ navigation }) {
 }
 
 const styles = StyleSheet.create({
-  container: {
+  container:     {
     flex: 1,
     paddingHorizontal: 20,
     paddingTop: 80,
     backgroundColor: '#fff',
   },
-  heading: {
+  heading:       {
     fontSize: 28,
     fontWeight: '600',
     marginBottom: 24,
     textAlign: 'center',
     color: '#333',
   },
-  input: {
+  input:         {
     height: 50,
     borderColor: '#ccc',
     borderWidth: 1,
     borderRadius: 6,
     marginBottom: 16,
     paddingHorizontal: 12,
+    fontSize: 16,
   },
-  footer: {
+  inputContainer:{
+    position: 'relative',
+  },
+  eyeButton:     {
+    position: 'absolute',
+    right: 16,
+    top: 15,
+    padding: 4,
+  },
+  footer:        {
     flexDirection: 'row',
     marginTop: 20,
     justifyContent: 'center',
   },
-  loginLink: {
+  loginLink:     {
     color: '#E91E63',
     fontWeight: '500',
   },

@@ -1,4 +1,4 @@
-// src/screens/Auth/VerifyCodeScreen.js
+// verifying email when signing up
 import React, { useState } from 'react';
 import {
   View,
