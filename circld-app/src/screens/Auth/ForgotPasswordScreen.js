@@ -6,7 +6,11 @@ import {
   Alert,
   StyleSheet,
   Text,
+  KeyboardAvoidingView,
+  Platform,
+  TouchableOpacity,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { client } from '../../api/client';
 
 export default function ForgotPasswordScreen({ navigation }) {
@@ -42,7 +46,11 @@ export default function ForgotPasswordScreen({ navigation }) {
   };
 
   return (
-    <View style={styles.container}>
+    <KeyboardAvoidingView
+      style={styles.container}
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
+    >
       <Text style={styles.instruction}>
         Enter your email to receive a password reset code.
       </Text>
@@ -59,7 +67,7 @@ export default function ForgotPasswordScreen({ navigation }) {
         onPress={handleRequest}
         disabled={loading}
       />
-    </View>
+    </KeyboardAvoidingView>
   );
 }
 

@@ -1,9 +1,19 @@
 // email change in profile section (account)
 import React, { useState } from 'react';
 import {
-  View, Text, TextInput, Button, Alert, StyleSheet, ActivityIndicator
+  View, 
+  Text, 
+  TextInput, 
+  Button, 
+  Alert, 
+  StyleSheet, 
+  ActivityIndicator,
+  KeyboardAvoidingView,
+  Platform,
+  TouchableOpacity,
 } from 'react-native';
 import { client } from '../../api/client';
+import { Ionicons } from '@expo/vector-icons';
 
 export default function VerifyEmailChangeScreen({ navigation }) {
   const [code, setCode]     = useState('');
@@ -32,7 +42,11 @@ export default function VerifyEmailChangeScreen({ navigation }) {
   };
 
   return (
-    <View style={styles.container}>
+    <KeyboardAvoidingView
+      style={styles.container}
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
+    >
       <Text style={styles.instruction}>
         Enter the code we sent to your new email address:
       </Text>
@@ -48,7 +62,7 @@ export default function VerifyEmailChangeScreen({ navigation }) {
         ? <ActivityIndicator />
         : <Button title="Verify Code" onPress={handleVerify} />
       }
-    </View>
+    </KeyboardAvoidingView>
   );
 }
 
