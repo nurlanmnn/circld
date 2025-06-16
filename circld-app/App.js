@@ -9,6 +9,8 @@ import SignupScreen      from './src/screens/Auth/SignupScreen';
 import VerifyCodeScreen  from './src/screens/Auth/VerifyCodeScreen';
 import AppTabs           from './src/navigation/AppTabs';
 import VerifyEmailChangeScreen from './src/screens/Auth/VerifyEmailChangeScreen';
+import ForgotPasswordScreen  from './src/screens/Auth/ForgotPasswordScreen';
+import ResetPasswordScreen   from './src/screens/Auth/ResetPasswordScreen';
 
 const RootStack = createNativeStackNavigator();
 const queryClient = new QueryClient();
@@ -22,13 +24,34 @@ export default function App() {
           <RootStack.Screen name="Login"      component={LoginScreen} />
           <RootStack.Screen name="Signup"     component={SignupScreen} />
           <RootStack.Screen name="VerifyCode" component={VerifyCodeScreen} />
-          {/* Main app */}
-          <RootStack.Screen name="Main"       component={AppTabs} />
+
           <RootStack.Screen
             name="VerifyEmailChange"
             component={VerifyEmailChangeScreen}
             options={{ headerShown:false }}
           />
+          {/* override headerShown for ForgotPassword */}
+        <RootStack.Screen
+          name="ForgotPassword"
+          component={ForgotPasswordScreen}
+          options={{
+            headerShown: true,
+            title: 'Forgot Password',
+          }}
+        />
+
+        {/* override for ResetPassword too */}
+        <RootStack.Screen
+          name="ResetPassword"
+          component={ResetPasswordScreen}
+          options={{
+            headerShown: true,
+            title: 'Reset Password',
+          }}
+        />
+
+        {/* once you’re authenticated… */}
+        <RootStack.Screen name="Main" component={AppTabs} />
         </RootStack.Navigator>
       </NavigationContainer>
     </QueryClientProvider>

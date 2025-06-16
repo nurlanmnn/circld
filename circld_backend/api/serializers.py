@@ -206,3 +206,32 @@ class VerifyEmailChangeSerializer(serializers.Serializer):
         min_length=6,
         trim_whitespace=True
     )
+
+# forgot password
+class RequestPasswordResetSerializer(serializers.Serializer):
+    email = serializers.EmailField()
+
+    def validate_email(self, value):
+        """
+        Ensure an account with this email actually exists,
+        otherwise raise a validation error.
+        """
+        value = value.lower().strip()
+        if not User.objects.filter(email=value).exists():
+            raise serializers.ValidationError(
+                "No account is registered with this email."
+            )
+        return value
+
+class ConfirmPasswordResetSerializer(serializers.Serializer):
+    email          = serializers.EmailField()
+    token          = serializers.CharField(max_length=6)
+    new_password   = serializers.CharField(write_only=True)
+    new_password2  = serializers.CharField(write_only=True)
+
+    def validate(self, data):
+        if data['new_password'] != data['new_password2']:
+            raise serializers.ValidationError({
+                "new_password2": "Passwords do not match."
+            })
+        return data

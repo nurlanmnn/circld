@@ -77,10 +77,17 @@ export default function LoginScreen({ navigation }) {
             secureTextEntry
             style={styles.input}
           />
+          <TouchableOpacity
+            style={styles.forgotLinkContainer}
+            onPress={() => navigation.navigate('ForgotPassword')}
+          >
+            <Text style={styles.forgotLinkText}>Forgot password?</Text>
+          </TouchableOpacity>
 
           <View style={styles.buttonContainer}>
             <Button title="Log In" onPress={login} />
           </View>
+          
 
           <View style={styles.footer}>
             <Text>Don't have an account?</Text>
@@ -115,6 +122,14 @@ const styles = StyleSheet.create({
     marginBottom: 12,
     paddingHorizontal: 10,
   },
+  forgotLinkContainer: {
+    alignSelf:    'flex-end',
+    marginBottom: 16,
+  },
+  forgotLinkText: {
+    fontSize:  13,
+    color:     '#888',    // lighter, less prominent
+  },
   footer: {
     flexDirection: 'row',
     marginTop: 20,
@@ -125,4 +140,3 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
 });
-

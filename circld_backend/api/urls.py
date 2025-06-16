@@ -13,6 +13,8 @@ from .views import (
     DeleteAccountView,
     RequestEmailChangeView, 
     VerifyEmailChangeView,
+    RequestPasswordResetView,
+    ConfirmPasswordResetView,
 )
 
 router = DefaultRouter()
@@ -30,4 +32,6 @@ urlpatterns = [
     path('profile/delete/',DeleteAccountView.as_view(), name='profile/delete'),
     path('profile/request-email-change/', RequestEmailChangeView.as_view()),
     path('profile/verify-email-change/',  VerifyEmailChangeView .as_view()),
+    path('auth/password-reset/request/', RequestPasswordResetView.as_view()),
+    path('auth/password-reset/confirm/', ConfirmPasswordResetView.as_view()),
 ]

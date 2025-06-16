@@ -12,7 +12,10 @@ from .serializers import (
     SignupSerializer, 
     ProfileSerializer, 
     RequestEmailChangeSerializer,
-    VerifyEmailChangeSerializer )
+    VerifyEmailChangeSerializer,
+    RequestPasswordResetSerializer,
+    ConfirmPasswordResetSerializer
+    )
 from rest_framework.decorators import action
 from rest_framework.views import APIView
 import random
@@ -113,7 +116,6 @@ class SignupView(generics.GenericAPIView):
             return Response({"detail": "User created successfully."}, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-# TEMP
 class VerifyCodeView(APIView):
     permission_classes = []  # allow unauthenticated
 
@@ -146,7 +148,6 @@ class VerifyCodeView(APIView):
         profile.save()
 
         return Response({"message": "Email verified! You can now log in."})
-# TEMP
 
 class ResendCodeView(APIView):
     permission_classes = []
@@ -258,3 +259,78 @@ class VerifyEmailChangeView(APIView):
             {"message": "Email updated successfully."},
             status=status.HTTP_200_OK
         )
+
+# for password reset
+class RequestPasswordResetView(APIView):
+    permission_classes = [permissions.AllowAny]
+
+    def post(self, request):
+        serializer = RequestPasswordResetSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        email = serializer.validated_data['email'].lower()
+        try:
+            user = get_user_model().objects.get(email=email)
+        except get_user_model().DoesNotExist:
+            # UniqueValidator already catches this, but just in case
+            return Response({"email": ["No such account."]},
+                            status=status.HTTP_400_BAD_REQUEST)
+
+        code = f"{random.randint(0, 999999):06d}"
+        profile = user.profile
+        profile.email_token = code
+        profile.save()
+
+        send_mail(
+            subject="Your Circld password reset code",
+            message=f"Your reset code is {code}",
+            from_email=settings.DEFAULT_FROM_EMAIL,
+            recipient_list=[email],
+            fail_silently=False,
+        )
+        return Response({"message": "Password reset code sent."})
+
+class ConfirmPasswordResetView(APIView):
+    permission_classes = [permissions.AllowAny]
+
+    def post(self, request):
+        serializer = ConfirmPasswordResetSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        email = serializer.validated_data['email'].lower()
+        token = serializer.validated_data['token']
+        pwd   = serializer.validated_data['new_password']
+
+        try:
+            user = get_user_model().objects.get(email=email)
+        except get_user_model().DoesNotExist:
+            return Response({"email": ["No such account."]},
+                            status=status.HTTP_400_BAD_REQUEST)
+
+        profile = user.profile
+        if profile.email_token != token:
+            # Bad code → auto‐resend a new one
+            new_code = f"{random.randint(0, 999999):06d}"
+            profile.email_token = new_code
+            profile.save()
+
+            send_mail(
+                subject="Your new Circld password reset code",
+                message=f"Your new reset code is {new_code}",
+                from_email=settings.DEFAULT_FROM_EMAIL,
+                recipient_list=[email],
+                fail_silently=False,
+            )
+
+            return Response(
+                {"token": "Invalid code. A new reset code has been sent to your email."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # Everything checks out → reset password
+        user.set_password(pwd)
+        user.save()
+        profile.email_token = ""
+        profile.save()
+
+        return Response({"message": "Password has been reset."})
