@@ -55,6 +55,12 @@ export default function LoginScreen({ navigation }) {
       style={{ flex: 1 }}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
+      <View style={styles.backContainer}>
+        <TouchableOpacity onPress={() => navigation.replace('Welcome')}>
+          <Ionicons name="arrow-back" size={25} color="#333" />
+        </TouchableOpacity>
+      </View>
+
       <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
         <ScrollView
           contentContainerStyle={styles.container}
@@ -119,6 +125,12 @@ export default function LoginScreen({ navigation }) {
 }
 
 const styles = StyleSheet.create({
+  backContainer: {
+    position: 'absolute',
+    top: 50,
+    left: 16,
+    zIndex: 10,
+  },
   container: {
     flexGrow: 1,
     justifyContent: 'center',

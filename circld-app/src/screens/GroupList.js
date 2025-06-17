@@ -23,7 +23,7 @@ export default function GroupList({ navigation }) {
       await SecureStore.deleteItemAsync('accessToken');
       await SecureStore.deleteItemAsync('refreshToken');
       queryClient.clear();
-      navigation.replace('Login');
+      navigation.replace('Welcome');
     } catch (err) {
       Alert.alert('Logout error', 'Something went wrong while logging out');
     }

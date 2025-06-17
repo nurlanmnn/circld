@@ -11,6 +11,7 @@ import AppTabs           from './src/navigation/AppTabs';
 import VerifyEmailChangeScreen from './src/screens/Auth/VerifyEmailChangeScreen';
 import ForgotPasswordScreen  from './src/screens/Auth/ForgotPasswordScreen';
 import ResetPasswordScreen   from './src/screens/Auth/ResetPasswordScreen';
+import WelcomeScreen   from './src/screens/Auth/WelcomeScreen';
 
 const RootStack = createNativeStackNavigator();
 const queryClient = new QueryClient();
@@ -19,7 +20,11 @@ export default function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <NavigationContainer>
-        <RootStack.Navigator screenOptions={{ headerShown: false }}>
+      <RootStack.Navigator
+        initialRouteName="Welcome"       // ← show it first
+        screenOptions={{ headerShown: false }}
+      >
+        <RootStack.Screen name="Welcome" component={WelcomeScreen} />
           {/* Auth flow */}
           <RootStack.Screen name="Login"      component={LoginScreen} />
           <RootStack.Screen name="Signup"     component={SignupScreen} />

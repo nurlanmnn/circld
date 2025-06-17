@@ -1,2 +1,2 @@
-# circld
+# CIRCLD
 Circld is the all-in-one social organizer that keeps your friend group effortlessly in sync. With AI-powered scheduling, group polls, automatic bill-splitting, and smart activity suggestions, you’ll spend less time coordinating and more time enjoying. Whether it’s a weekend brunch, a road-trip, or splitting dinner tabs, Circld makes every get-together seamless. Join your circle—welcome to Circld.

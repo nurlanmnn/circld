@@ -84,6 +84,12 @@ export default function SignupScreen({ navigation }) {
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
     >
+      <View style={styles.backContainer}>
+        <TouchableOpacity onPress={() => navigation.replace('Welcome')}>
+          <Ionicons name="arrow-back" size={25} color="#333" />
+        </TouchableOpacity>
+      </View>
+
       <Text style={styles.heading}>Create an Account</Text>
       <TextInput
         placeholder="First Name"
@@ -174,6 +180,12 @@ export default function SignupScreen({ navigation }) {
 }
 
 const styles = StyleSheet.create({
+  backContainer: {
+    position: 'absolute',
+    top: 50,
+    left: 16,
+    zIndex: 10,
+  },
   container:     {
     flex: 1,
     paddingHorizontal: 20,
