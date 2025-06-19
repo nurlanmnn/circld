@@ -1,5 +1,3 @@
-// src/screens/Auth/WelcomeScreen.js
-
 import React from 'react';
 import {
   View,
@@ -32,10 +30,10 @@ export default function WelcomeScreen({ navigation }) {
       </TouchableOpacity>
 
       <TouchableOpacity
-        style={styles.linkButton}
+        style={styles.secondaryButton}
         onPress={() => navigation.replace('Login')}
       >
-        <Text style={styles.linkText}>Log In</Text>
+        <Text style={styles.secondaryText}>Log In</Text>
       </TouchableOpacity>
     </View>
   );
@@ -84,12 +82,18 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     textAlign: 'center',
   },
-  linkButton: {
-    paddingVertical: 12,
+  secondaryButton: {
+    width: '100%',
+    backgroundColor: '#fff',
+    borderWidth: 1,
+    borderColor: '#E91E63',
+    paddingVertical: 16,
+    borderRadius: 8,
   },
-  linkText: {
-    color: '#333',
-    fontSize: 16,
+  secondaryText: {
+    color: '#E91E63',
+    fontSize: 18,
+    fontWeight: '600',
     textAlign: 'center',
   },
 });

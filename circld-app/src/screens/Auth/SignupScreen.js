@@ -1,17 +1,17 @@
-// src/screens/Auth/SignupScreen.js
-
 import React, { useState } from 'react';
 import {
   View,
   TextInput,
-  Button,
   Alert,
   StyleSheet,
   Text,
-  TouchableOpacity,
-  ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
+  TouchableOpacity,
+  TouchableWithoutFeedback,
+  Keyboard,
+  ScrollView,
+  ActivityIndicator,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as SecureStore from 'expo-secure-store';
@@ -24,8 +24,8 @@ export default function SignupScreen({ navigation }) {
   const [email, setEmail]           = useState('');
   const [password, setPassword]     = useState('');
   const [password2, setPassword2]   = useState('');
-  const [showPassword, setShowPassword]   = useState(false);
-  const [showPassword2, setShowPassword2] = useState(false);
+  const [showPassword, setShowPassword]     = useState(false);
+  const [showPassword2, setShowPassword2]   = useState(false);
   const [loading, setLoading]       = useState(false);
 
   const handleSignup = async () => {
@@ -53,7 +53,6 @@ export default function SignupScreen({ navigation }) {
         password,
         password2,
       });
-
       if (registerRes.status === 201) {
         const tokenRes = await client.post('token/', {
           username: username.trim(),
@@ -64,15 +63,13 @@ export default function SignupScreen({ navigation }) {
         navigation.replace('Groups');
       }
     } catch (err) {
+      let msg = 'Something went wrong.';
       if (err.response?.data) {
-        let msg = '';
-        Object.keys(err.response.data).forEach(field => {
-          msg += `${field}: ${err.response.data[field].join(' ')}\n`;
-        });
-        Alert.alert('Registration Error', msg.trim());
-      } else {
-        Alert.alert('Registration Error', 'Something went wrong. Please try again.');
+        msg = Object.entries(err.response.data)
+          .map(([field, errs]) => `${field}: ${errs.join(' ')}`)
+          .join('\n');
       }
+      Alert.alert('Registration Error', msg);
     } finally {
       setLoading(false);
     }
@@ -80,101 +77,114 @@ export default function SignupScreen({ navigation }) {
 
   return (
     <KeyboardAvoidingView
-      style={styles.container}
+      style={{ flex: 1, backgroundColor: '#fff' }}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
     >
+      {/* Back button */}
       <View style={styles.backContainer}>
         <TouchableOpacity onPress={() => navigation.replace('Welcome')}>
-          <Ionicons name="arrow-back" size={25} color="#333" />
+          <Ionicons name="arrow-back" size={28} color="#333" />
         </TouchableOpacity>
       </View>
 
-      <Text style={styles.heading}>Create an Account</Text>
-      <TextInput
-        placeholder="First Name"
-        value={firstName}
-        onChangeText={setFirstName}
-        autoCapitalize="words"
-        style={styles.input}
-      />
-      <TextInput
-        placeholder="Last Name"
-        value={lastName}
-        onChangeText={setLastName}
-        autoCapitalize="words"
-        style={styles.input}
-      />
-      <TextInput
-        placeholder="Username"
-        value={username}
-        onChangeText={setUsername}
-        autoCapitalize="none"
-        style={styles.input}
-      />
-      <TextInput
-        placeholder="Email"
-        value={email}
-        onChangeText={setEmail}
-        autoCapitalize="none"
-        keyboardType="email-address"
-        style={styles.input}
-      />
-
-      {/* Password field with toggle */}
-      <View style={styles.inputContainer}>
-        <TextInput
-          placeholder="Password"
-          value={password}
-          onChangeText={setPassword}
-          secureTextEntry={!showPassword}
-          style={[styles.input, { paddingRight: 40 }]}
-        />
-        <TouchableOpacity
-          onPress={() => setShowPassword(s => !s)}
-          style={styles.eyeButton}
+      <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+        <ScrollView
+          contentContainerStyle={styles.container}
+          keyboardShouldPersistTaps="handled"
         >
-          <Ionicons
-            name={showPassword ? 'eye-off-outline' : 'eye-outline'}
-            size={20}
-            color="#888"
+          <Text style={styles.heading}>Create an Account</Text>
+
+          <TextInput
+            placeholder="First Name"
+            value={firstName}
+            onChangeText={setFirstName}
+            autoCapitalize="words"
+            style={styles.input}
           />
-        </TouchableOpacity>
-      </View>
-
-      {/* Confirm password with toggle */}
-      <View style={styles.inputContainer}>
-        <TextInput
-          placeholder="Confirm Password"
-          value={password2}
-          onChangeText={setPassword2}
-          secureTextEntry={!showPassword2}
-          style={[styles.input, { paddingRight: 40 }]}
-        />
-        <TouchableOpacity
-          onPress={() => setShowPassword2(s => !s)}
-          style={styles.eyeButton}
-        >
-          <Ionicons
-            name={showPassword2 ? 'eye-off-outline' : 'eye-outline'}
-            size={20}
-            color="#888"
+          <TextInput
+            placeholder="Last Name"
+            value={lastName}
+            onChangeText={setLastName}
+            autoCapitalize="words"
+            style={styles.input}
           />
-        </TouchableOpacity>
-      </View>
+          <TextInput
+            placeholder="Username"
+            value={username}
+            onChangeText={setUsername}
+            autoCapitalize="none"
+            style={styles.input}
+          />
+          <TextInput
+            placeholder="Email"
+            value={email}
+            onChangeText={setEmail}
+            autoCapitalize="none"
+            keyboardType="email-address"
+            style={styles.input}
+          />
 
-      {loading ? (
-        <ActivityIndicator size="large" color="#E91E63" style={{ marginTop: 16 }} />
-      ) : (
-        <Button title="Sign Up" onPress={handleSignup} color="#E91E63" />
-      )}
+          {/* Password */}
+          <View style={styles.inputContainer}>
+            <TextInput
+              placeholder="Password"
+              value={password}
+              onChangeText={setPassword}
+              secureTextEntry={!showPassword}
+              style={[styles.input, { paddingRight: 40 }]}
+            />
+            <TouchableOpacity
+              onPress={() => setShowPassword(s => !s)}
+              style={styles.eyeButton}
+            >
+              <Ionicons
+                name={showPassword ? 'eye-off-outline' : 'eye-outline'}
+                size={20}
+                color="#888"
+              />
+            </TouchableOpacity>
+          </View>
 
-      <View style={styles.footer}>
-        <Text>Already have an account?</Text>
-        <TouchableOpacity onPress={() => navigation.replace('Login')}>
-          <Text style={styles.loginLink}> Log In</Text>
-        </TouchableOpacity>
-      </View>
+          {/* Confirm Password */}
+          <View style={styles.inputContainer}>
+            <TextInput
+              placeholder="Confirm Password"
+              value={password2}
+              onChangeText={setPassword2}
+              secureTextEntry={!showPassword2}
+              style={[styles.input, { paddingRight: 40 }]}
+            />
+            <TouchableOpacity
+              onPress={() => setShowPassword2(s => !s)}
+              style={styles.eyeButton}
+            >
+              <Ionicons
+                name={showPassword2 ? 'eye-off-outline' : 'eye-outline'}
+                size={20}
+                color="#888"
+              />
+            </TouchableOpacity>
+          </View>
+
+          {/* Sign Up button */}
+          {loading ? (
+            <ActivityIndicator size="large" color="#E91E63" style={{ marginTop: 16 }} />
+          ) : (
+            <TouchableOpacity style={styles.primaryButton} onPress={handleSignup}>
+              <Text style={styles.primaryText}>Sign Up</Text>
+            </TouchableOpacity>
+          )}
+
+          {/* Footer link */}
+          <View style={styles.footer}>
+            <Text>Already have an account?</Text>
+            <TouchableOpacity onPress={() => navigation.replace('Login')}>
+              <Text style={styles.footerLink}> Log In</Text>
+            </TouchableOpacity>
+          </View>
+        </ScrollView>
+      </TouchableWithoutFeedback>
     </KeyboardAvoidingView>
   );
 }
@@ -182,48 +192,61 @@ export default function SignupScreen({ navigation }) {
 const styles = StyleSheet.create({
   backContainer: {
     position: 'absolute',
-    top: 50,
+    top: Platform.OS === 'ios' ? 50 : 20,
     left: 16,
     zIndex: 10,
   },
-  container:     {
-    flex: 1,
-    paddingHorizontal: 20,
-    paddingTop: 80,
-    backgroundColor: '#fff',
+  container: {
+    flexGrow: 1,
+    justifyContent: 'center',
+    paddingHorizontal: 24,
+    paddingBottom: 40,
   },
-  heading:       {
+  heading: {
     fontSize: 28,
     fontWeight: '600',
-    marginBottom: 24,
     textAlign: 'center',
+    marginBottom: 24,
     color: '#333',
   },
-  input:         {
+  input: {
     height: 50,
     borderColor: '#ccc',
     borderWidth: 1,
-    borderRadius: 6,
+    borderRadius: 8,
     marginBottom: 16,
     paddingHorizontal: 12,
     fontSize: 16,
   },
-  inputContainer:{
+  inputContainer: {
     position: 'relative',
   },
-  eyeButton:     {
+  eyeButton: {
     position: 'absolute',
     right: 16,
     top: 15,
     padding: 4,
   },
-  footer:        {
-    flexDirection: 'row',
-    marginTop: 20,
-    justifyContent: 'center',
+  primaryButton: {
+    width: '100%',
+    backgroundColor: '#E91E63',
+    paddingVertical: 16,
+    borderRadius: 8,
+    marginBottom: 20,
   },
-  loginLink:     {
+  primaryText: {
+    color: '#fff',
+    fontSize: 18,
+    fontWeight: '600',
+    textAlign: 'center',
+  },
+  footer: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    marginTop: 8,
+  },
+  footerLink: {
     color: '#E91E63',
-    fontWeight: '500',
+    fontWeight: '600',
   },
 });

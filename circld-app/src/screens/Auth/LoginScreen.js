@@ -1,63 +1,53 @@
-// src/screens/Auth/LoginScreen.js
 import React, { useState } from 'react';
 import {
   View,
   TextInput,
-  Button,
   Alert,
   StyleSheet,
   Text,
-  Image,
-  TouchableOpacity,
   KeyboardAvoidingView,
   Platform,
+  TouchableOpacity,
   TouchableWithoutFeedback,
   Keyboard,
   ScrollView,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import * as SecureStore from 'expo-secure-store';
 import { client } from '../../api/client';
-import { Dimensions } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
-
-const { width } = Dimensions.get('window');
 
 export default function LoginScreen({ navigation }) {
-  const [username, setUsername] = useState('');
-  const [password, setPassword] = useState('');
-  const [showPassword, setShowPassword] = useState(false); 
+  const [username,     setUsername]     = useState('');
+  const [password,     setPassword]     = useState('');
+  const [showPassword, setShowPassword] = useState(false);
 
   const login = async () => {
     if (!username.trim() || !password) {
-      Alert.alert('Missing fields', 'Enter both username or email and password.');
-      return;
+      return Alert.alert('Missing fields', 'Enter both username/email and password.');
     }
     try {
       const { data } = await client.post('token/', { username, password });
       await SecureStore.setItemAsync('accessToken', data.access);
       await SecureStore.setItemAsync('refreshToken', data.refresh);
-      navigation.replace('Main'); // temp
+      navigation.replace('Main');
     } catch (err) {
-      // If backend returns 401 (user not active/verified), show a special message
       if (err.response?.status === 401) {
-          return Alert.alert(
-            'Email not verified',
-            'Please verify your email before logging in.'
-          );
-        }
-        // Fallback for other errors
-        Alert.alert('Login failed', 'Check your credentials and try again.');
+        return Alert.alert('Email not verified','Please verify your email before logging in.');
+      }
+      Alert.alert('Login failed', 'Check your credentials and try again.');
     }
   };
 
   return (
     <KeyboardAvoidingView
-      style={{ flex: 1 }}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      style={{ flex: 1, backgroundColor: '#fff' }}
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
     >
+      {/* Back button */}
       <View style={styles.backContainer}>
         <TouchableOpacity onPress={() => navigation.replace('Welcome')}>
-          <Ionicons name="arrow-back" size={25} color="#333" />
+          <Ionicons name="arrow-back" size={28} color="#333" />
         </TouchableOpacity>
       </View>
 
@@ -66,12 +56,7 @@ export default function LoginScreen({ navigation }) {
           contentContainerStyle={styles.container}
           keyboardShouldPersistTaps="handled"
         >
-          <Image
-            source={require('../../../assets/logo_circld.png')}
-            style={styles.logo}
-            resizeMode="contain"
-          />
-
+          {/* Username/Email */}
           <TextInput
             placeholder="Username or Email"
             value={username}
@@ -80,6 +65,7 @@ export default function LoginScreen({ navigation }) {
             style={styles.input}
           />
 
+          {/* Password + eye toggle */}
           <View style={styles.inputContainer}>
             <TextInput
               placeholder="Password"
@@ -100,6 +86,7 @@ export default function LoginScreen({ navigation }) {
             </TouchableOpacity>
           </View>
 
+          {/* Forgot */}
           <TouchableOpacity
             style={styles.forgotLinkContainer}
             onPress={() => navigation.navigate('ForgotPassword')}
@@ -107,11 +94,12 @@ export default function LoginScreen({ navigation }) {
             <Text style={styles.forgotLinkText}>Forgot password?</Text>
           </TouchableOpacity>
 
-          <View style={styles.buttonContainer}>
-            <Button title="Log In" onPress={login} />
-          </View>
-          
+          {/* ——— Styled Login Button ——— */}
+          <TouchableOpacity style={styles.primaryButton} onPress={login}>
+            <Text style={styles.primaryText}>Log In</Text>
+          </TouchableOpacity>
 
+          {/* Sign Up footer */}
           <View style={styles.footer}>
             <Text>Don't have an account?</Text>
             <TouchableOpacity onPress={() => navigation.replace('Signup')}>
@@ -127,29 +115,26 @@ export default function LoginScreen({ navigation }) {
 const styles = StyleSheet.create({
   backContainer: {
     position: 'absolute',
-    top: 50,
+    top: Platform.OS === 'ios' ? 50 : 20,
     left: 16,
     zIndex: 10,
   },
   container: {
     flexGrow: 1,
     justifyContent: 'center',
-    paddingHorizontal: 16,
-    backgroundColor: '#fff',
-  },
-  logo: {
-    width: width * 0.52,       // 60% of screen width
-    height: width * 0.52,      // keep it square
-    alignSelf: 'center',
-    marginBottom: 80,
+    paddingHorizontal: 24,
   },
   input: {
     height: 50,
     borderColor: '#ccc',
     borderWidth: 1,
-    borderRadius: 5,
+    borderRadius: 8,
     marginBottom: 12,
-    paddingHorizontal: 10,
+    paddingHorizontal: 12,
+    fontSize: 16,
+  },
+  inputContainer: {
+    position: 'relative',
   },
   eyeButton: {
     position: 'absolute',
@@ -158,20 +143,36 @@ const styles = StyleSheet.create({
     padding: 4,
   },
   forgotLinkContainer: {
-    alignSelf:    'flex-end',
-    marginBottom: 16,
+    alignSelf: 'flex-end',
+    marginBottom: 24,
   },
   forgotLinkText: {
-    fontSize:  13,
-    color:     '#888',    // lighter, less prominent
+    fontSize: 14,
+    color: '#888',
   },
+
+  // —— Primary Circld Button ——
+  primaryButton: {
+    width: '100%',
+    backgroundColor: '#E91E63',
+    paddingVertical: 16,
+    borderRadius: 8,
+    marginBottom: 20,
+  },
+  primaryText: {
+    color: '#fff',
+    fontSize: 18,
+    fontWeight: '600',
+    textAlign: 'center',
+  },
+
   footer: {
     flexDirection: 'row',
-    marginTop: 20,
     justifyContent: 'center',
+    marginTop: 8,
   },
   signupLink: {
     color: '#E91E63',
-    fontWeight: '500',
+    fontWeight: '600',
   },
 });
