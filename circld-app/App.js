@@ -22,7 +22,10 @@ export default function App() {
       <NavigationContainer>
       <RootStack.Navigator
         initialRouteName="Welcome"       // ← show it first
-        screenOptions={{ headerShown: false }}
+        screenOptions={{ 
+          headerShown: false,
+          gestureEnabled: true,
+        }}
       >
         <RootStack.Screen name="Welcome" component={WelcomeScreen} />
           {/* Auth flow */}
@@ -57,6 +60,7 @@ export default function App() {
 
         {/* once you’re authenticated… */}
         <RootStack.Screen name="Main" component={AppTabs} />
+        
         </RootStack.Navigator>
       </NavigationContainer>
     </QueryClientProvider>

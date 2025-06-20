@@ -4,97 +4,143 @@ import React, { useState } from 'react';
 import {
   View,
   TextInput,
-  Button,
-  StyleSheet,
+  Text,
   Alert,
   ActivityIndicator,
+  StyleSheet,
+  KeyboardAvoidingView,
+  Platform,
+  TouchableOpacity,
+  TouchableWithoutFeedback,
+  Keyboard,
+  ScrollView,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { client } from '../api/client';
 
 export default function CreateGroupScreen({ navigation }) {
   const [name, setName] = useState('');
-  const [loading, setLoading] = useState(false);
-  const queryClient = useQueryClient();
+  const queryClient     = useQueryClient();
 
-  // ⚠️ React Query v5 requires an object signature for useMutation
-  const createGroup = useMutation({
-    // This is your actual POST call:
-    mutationFn: (newGroup) => client.post('groups/', newGroup),
+  // ✅ React-Query v5 style: pass an object
+  const createGroupMutation = useMutation({
+    mutationFn: (newGroup) =>
+      client.post('groups/', newGroup),
 
-    // On success, invalidate the 'groups' query and go back.
-    onSuccess: (response) => {
+    onSuccess: () => {
+      // refresh your list and go back
       queryClient.invalidateQueries({ queryKey: ['groups'] });
       navigation.goBack();
     },
 
-    // You can also include onError / onSettled here if you want:
     onError: (err) => {
-      // We’ll also handle errors in handleSubmit for a nicer Alert.
+      // present a friendly alert
+      const data = err.response?.data;
+      let message = 'Could not create group. Please try again.';
+      if (data) {
+        message = Object.entries(data)
+          .map(([field, arr]) => `${field}: ${arr.join(' ')}`)
+          .join('\n');
+      }
+      Alert.alert('Create Group Failed', message);
     },
   });
 
   const handleSubmit = () => {
     if (!name.trim()) {
-      Alert.alert('Validation Error', 'Group name cannot be empty.');
-      return;
+      return Alert.alert(
+        'Validation Error',
+        'Group name cannot be empty.'
+      );
     }
-    setLoading(true);
-
-    createGroup.mutate(
-      { name }, // payload
-      {
-        onError: (err) => {
-          setLoading(false);
-          if (err.response && err.response.data) {
-            const errors = err.response.data;
-            let msg = '';
-            Object.keys(errors).forEach((field) => {
-              msg += `${field}: ${errors[field].join(' ')}\n`;
-            });
-            Alert.alert('Create Group Failed', msg.trim());
-          } else {
-            Alert.alert('Create Group Failed', 'Please try again.');
-          }
-        },
-        onSettled: () => {
-          setLoading(false);
-        },
-      }
-    );
+    createGroupMutation.mutate({ name: name.trim() });
   };
 
   return (
-    <View style={styles.container}>
-      <TextInput
-        placeholder="Group Name"
-        value={name}
-        onChangeText={setName}
-        style={styles.input}
-      />
-      {loading ? (
-        <ActivityIndicator size="large" color="#E91E63" />
-      ) : (
-        <Button title="Create Group" onPress={handleSubmit} color="#E91E63" />
-      )}
-    </View>
+    <KeyboardAvoidingView
+      style={styles.flex}
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
+    >
+      {/* ← Back button */}
+      <View style={styles.backContainer}>
+        <TouchableOpacity onPress={() => navigation.goBack()}>
+          <Ionicons name="arrow-back" size={28} color="#333" />
+        </TouchableOpacity>
+      </View>
+
+      <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+        <ScrollView
+          contentContainerStyle={styles.container}
+          keyboardShouldPersistTaps="handled"
+        >
+          <TextInput
+            placeholder="Group Name"
+            value={name}
+            onChangeText={setName}
+            style={styles.input}
+          />
+
+          {createGroupMutation.isLoading ? (
+            <ActivityIndicator
+              size="large"
+              color="#E91E63"
+              style={{ marginTop: 8 }}
+            />
+          ) : (
+            <TouchableOpacity
+              style={styles.primaryButton}
+              onPress={handleSubmit}
+            >
+              <Text style={styles.primaryText}>
+                Create Group
+              </Text>
+            </TouchableOpacity>
+          )}
+        </ScrollView>
+      </TouchableWithoutFeedback>
+    </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  flex: {
     flex: 1,
-    paddingHorizontal: 16,
-    justifyContent: 'center',
     backgroundColor: '#fff',
+  },
+  backContainer: {
+    position: 'absolute',
+    top: Platform.OS === 'ios' ? 50 : 20,
+    left: 16,
+    zIndex: 10,
+  },
+  container: {
+    flexGrow: 1,
+    justifyContent: 'center',
+    paddingHorizontal: 24,
+    paddingBottom: 40,
   },
   input: {
     height: 50,
     borderColor: '#ccc',
     borderWidth: 1,
-    borderRadius: 6,
+    borderRadius: 8,
     marginBottom: 20,
     paddingHorizontal: 12,
     fontSize: 16,
+  },
+  primaryButton: {
+    width: '100%',
+    backgroundColor: '#E91E63',
+    paddingVertical: 16,
+    borderRadius: 8,
+    marginTop: 8,
+  },
+  primaryText: {
+    color: '#fff',
+    fontSize: 18,
+    fontWeight: '600',
+    textAlign: 'center',
   },
 });

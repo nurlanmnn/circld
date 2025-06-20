@@ -1,30 +1,30 @@
-// circld-app/src/screens/JoinGroupScreen.js
-
 import React, { useState } from 'react';
 import {
   View,
   Text,
   TextInput,
-  Button,
-  StyleSheet,
   ActivityIndicator,
   Alert,
+  StyleSheet,
   KeyboardAvoidingView,
   Platform,
+  TouchableOpacity,
+  TouchableWithoutFeedback,
+  Keyboard,
+  ScrollView,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { client } from '../api/client';
 
 export default function JoinGroupScreen({ navigation }) {
-  const [code, setCode] = useState('');
+  const [code, setCode]       = useState('');
   const [loading, setLoading] = useState(false);
-  const queryClient = useQueryClient();
+  const queryClient          = useQueryClient();
 
-  // Mutation to POST /api/groups/join/
   const joinGroup = useMutation({
     mutationFn: ({ invite_code }) => client.post('groups/join/', { invite_code }),
     onSuccess: () => {
-      // Refresh the list of groups so the newly joined group appears
       queryClient.invalidateQueries({ queryKey: ['groups'] });
       navigation.goBack();
     },
@@ -32,19 +32,16 @@ export default function JoinGroupScreen({ navigation }) {
 
   const handleJoin = () => {
     if (!code.trim()) {
-      Alert.alert('Validation', 'Invite code cannot be empty.');
-      return;
+      return Alert.alert('Validation', 'Invite code cannot be empty.');
     }
     setLoading(true);
-
     joinGroup.mutate(
       { invite_code: code.trim() },
       {
         onError: (err) => {
           setLoading(false);
           if (err.response) {
-            const status = err.response.status;
-            const data = err.response.data;
+            const { status, data } = err.response;
             if (status === 404) {
               Alert.alert('Invalid Code', 'No group matches that invite code.');
             } else if (data.invite_code) {
@@ -58,63 +55,104 @@ export default function JoinGroupScreen({ navigation }) {
             Alert.alert('Network Error', 'Please check your connection.');
           }
         },
-        onSettled: () => {
-          setLoading(false);
-        },
+        onSettled: () => setLoading(false),
       }
     );
   };
 
   return (
     <KeyboardAvoidingView
-      style={styles.container}
+      style={styles.flex}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
     >
-      <Text style={styles.instructions}>
-        Enter an invitation code to join a group:
-      </Text>
+      {/* Back arrow */}
+      <View style={styles.backContainer}>
+        <TouchableOpacity onPress={() => navigation.goBack()}>
+          <Ionicons name="arrow-back" size={28} color="#333" />
+        </TouchableOpacity>
+      </View>
 
-      <TextInput
-        placeholder="Invitation Code"
-        value={code}
-        onChangeText={setCode}
-        autoCapitalize="characters"
-        autoCorrect={false}
-        maxLength={8}
-        style={styles.input}
-      />
+      <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+        <ScrollView
+          contentContainerStyle={styles.container}
+          keyboardShouldPersistTaps="handled"
+        >
+          <Text style={styles.instructions}>
+            Enter an invitation code to join a group:
+          </Text>
 
-      {loading ? (
-        <ActivityIndicator size="large" color="#E91E63" />
-      ) : (
-        <Button title="Join Group" onPress={handleJoin} color="#E91E63" />
-      )}
+          <TextInput
+            placeholder="Invitation Code"
+            value={code}
+            onChangeText={setCode}
+            autoCapitalize="characters"
+            autoCorrect={false}
+            maxLength={8}
+            style={styles.input}
+          />
+
+          {loading ? (
+            <ActivityIndicator size="large" color="#E91E63" />
+          ) : (
+            <TouchableOpacity
+              style={styles.primaryButton}
+              onPress={handleJoin}
+            >
+              <Text style={styles.primaryText}>Join Group</Text>
+            </TouchableOpacity>
+          )}
+        </ScrollView>
+      </TouchableWithoutFeedback>
     </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  flex: {
     flex: 1,
-    padding: 24,
-    justifyContent: 'center',
     backgroundColor: '#fff',
+  },
+  backContainer: {
+    position: 'absolute',
+    top: Platform.OS === 'ios' ? 50 : 20,
+    left: 16,
+    zIndex: 10,
+  },
+  container: {
+    flexGrow: 1,
+    justifyContent: 'center',
+    paddingHorizontal: 24,
+    paddingBottom: 40,
   },
   instructions: {
     fontSize: 16,
     marginBottom: 16,
     color: '#333',
+    textAlign: 'center',
   },
   input: {
     height: 50,
     borderColor: '#ccc',
     borderWidth: 1,
-    borderRadius: 6,
+    borderRadius: 8,
     marginBottom: 20,
     paddingHorizontal: 12,
-    fontSize: 18,
+    fontSize: 16,
     textTransform: 'uppercase',
     letterSpacing: 2,
+  },
+  primaryButton: {
+    width: '100%',
+    backgroundColor: '#E91E63',
+    paddingVertical: 16,
+    borderRadius: 8,
+    marginTop: 8,
+  },
+  primaryText: {
+    color: '#fff',
+    fontSize: 18,
+    fontWeight: '600',
+    textAlign: 'center',
   },
 });

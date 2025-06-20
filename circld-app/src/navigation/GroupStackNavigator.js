@@ -12,14 +12,16 @@ const Stack = createNativeStackNavigator();
 
 export default function GroupStackNavigator() {
   return (
-    <Stack.Navigator initialRouteName="Groups">
+    <Stack.Navigator 
+    initialRouteName="Groups"
+    >
       <Stack.Screen
         name="Groups"
         component={GroupList}
         options={{ title: 'Your Circld Groups' }}
       />
-      <Stack.Screen name="CreateGroup" component={CreateGroupScreen} options={{ title: 'New Group' }}/>
-      <Stack.Screen name="JoinGroup"   component={JoinGroupScreen}   options={{ title: 'Join a Group' }}/>
+      <Stack.Screen name="CreateGroup" component={CreateGroupScreen} options={{ title: 'New Group', headerShown: false, gestureEnabled: true }}/>
+      <Stack.Screen name="JoinGroup"   component={JoinGroupScreen}   options={{ title: 'Join a Group', headerShown: false, gestureEnabled: true }}/>
       <Stack.Screen name="GroupDetail" component={GroupDetail}       options={({ route }) => ({ title: route.params.name })}/>
       <Stack.Screen name="Expenses"    component={ExpensesScreen}    options={{ title: 'Expenses' }}/>
       <Stack.Screen name="Chat"        component={ChatScreen}        options={{ title: 'Chat' }}/>
