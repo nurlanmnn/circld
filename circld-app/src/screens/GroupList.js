@@ -17,18 +17,6 @@ import { client } from '../api/client';
 export default function GroupList({ navigation }) {
   const queryClient = useQueryClient();
 
-  // 1) Logout helper: clear tokens & navigate to Login
-  const logout = async () => {
-    try {
-      await SecureStore.deleteItemAsync('accessToken');
-      await SecureStore.deleteItemAsync('refreshToken');
-      queryClient.clear();
-      navigation.replace('Welcome');
-    } catch (err) {
-      Alert.alert('Logout error', 'Something went wrong while logging out');
-    }
-  };
-
   // 2) Use React Query to GET /api/groups/
   const {
     data: groups,
@@ -42,10 +30,6 @@ export default function GroupList({ navigation }) {
   // 3) Configure the header buttons (Logout, Join, Create)
   useLayoutEffect(() => {
     navigation.setOptions({
-      // Left side: a Logout button
-      headerLeft: () => (
-        <Button title="Logout" onPress={logout} color="#d9534f" />
-      ),
 
       // Right side: “Join” + “+” buttons
       headerRight: () => (

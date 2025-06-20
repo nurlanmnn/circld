@@ -5,7 +5,6 @@ import {
   View,
   Text,
   TextInput,
-  Button,
   Image,
   Alert,
   ActivityIndicator,
@@ -14,18 +13,19 @@ import {
   KeyboardAvoidingView,
   Platform,
   TouchableWithoutFeedback,
+  TouchableOpacity,
   Keyboard,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as ImagePicker from 'expo-image-picker';
 import * as SecureStore from 'expo-secure-store';
+import { Ionicons } from '@expo/vector-icons';
 import { client } from '../../api/client';
 
 export default function AccountScreen({ navigation }) {
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  // form fields
   const [firstName, setFirstName] = useState('');
   const [lastName,  setLastName]  = useState('');
   const [email,     setEmail]     = useState('');
@@ -34,7 +34,7 @@ export default function AccountScreen({ navigation }) {
 
   const [hasLibraryPermission, setHasLibraryPermission] = useState(false);
 
-  // 1) fetchProfile must be declared before useEffect so we can call it
+  // fetch profile from API
   async function fetchProfile() {
     try {
       const { data } = await client.get('profile/');
@@ -44,7 +44,7 @@ export default function AccountScreen({ navigation }) {
       setEmail(data.email);
       setAvatarUri(data.avatar);
     } catch {
-      Alert.alert('Error','Could not load profile.');
+      Alert.alert('Error', 'Could not load profile.');
     } finally {
       setLoading(false);
     }
@@ -52,31 +52,27 @@ export default function AccountScreen({ navigation }) {
 
   useEffect(() => {
     (async () => {
-      // ask once on mount
+      // ask photo-permissions once
       const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-      const granted = status === 'granted';
-      setHasLibraryPermission(granted);
-      if (!granted) {
+      setHasLibraryPermission(status === 'granted');
+      if (status !== 'granted') {
         Alert.alert(
           'Permission Needed',
           'Circld needs access to your photos to change your profile picture.'
         );
       }
-      // now load profile
+      // load the profile
       fetchProfile();
     })();
   }, []);
 
+  // open photo picker
   async function pickImage() {
     try {
-      // choose correct enum for this SDK
       const mediaTypes =
-      // new API (SDK 56+)
-      ImagePicker.MediaType?.Images
-      // fallback for older versions
-      ?? ImagePicker.MediaTypeOptions?.Images
-      // last-ditch default
-      ?? ImagePicker.MediaTypeOptions.Images;
+        ImagePicker.MediaType?.Images
+        ?? ImagePicker.MediaTypeOptions?.Images
+        ?? ImagePicker.MediaTypeOptions.Images;
 
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes,
@@ -84,9 +80,7 @@ export default function AccountScreen({ navigation }) {
         quality: 0.5,
       });
 
-      if (result.canceled || !result.assets?.length) {
-        return;
-      }
+      if (result.canceled || !result.assets?.length) return;
       setAvatarUri(result.assets[0].uri);
     } catch (err) {
       console.error('ImagePicker error', err);
@@ -94,22 +88,24 @@ export default function AccountScreen({ navigation }) {
     }
   }
 
+  // save changes (or trigger email‐change flow)
   const handleSave = async () => {
-      // if email changed → trigger request-change flow
+    // if email changed, send verification code
     if (email !== profile.email) {
       try {
         const { data } = await client.post(
           'profile/request-email-change/',
           { email }
         );
-        Alert.alert(
+        return Alert.alert(
           'Verify New Email',
           data.message,
-          [{ text:'OK', onPress: () =>
-              navigation.navigate('VerifyEmailChange', { from:'Account' })
+          [{
+            text: 'OK',
+            onPress: () =>
+              navigation.navigate('VerifyEmailChange', { from: 'Account' })
           }]
         );
-        return;
       } catch (err) {
         return Alert.alert(
           'Error',
@@ -117,11 +113,13 @@ export default function AccountScreen({ navigation }) {
         );
       }
     }
+
     setSaving(true);
     const formData = new FormData();
     formData.append('first_name', firstName);
     formData.append('last_name',  lastName);
     formData.append('email',      email);
+
     if (avatarUri?.startsWith('file://')) {
       const name = avatarUri.split('/').pop();
       const ext  = name.split('.').pop();
@@ -131,12 +129,14 @@ export default function AccountScreen({ navigation }) {
         type: `image/${ext}`,
       });
     }
+
     try {
       const { data } = await client.put('profile/', formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
       });
-      Alert.alert('Saved','Your profile has been updated.');
+      Alert.alert('Saved', 'Your profile has been updated.');
       setAvatarUri(data.avatar);
+      setProfile(data);
     } catch (err) {
       Alert.alert('Error', JSON.stringify(err.response?.data || err.message));
     } finally {
@@ -144,17 +144,7 @@ export default function AccountScreen({ navigation }) {
     }
   };
 
-  const handleDelete = () => {
-    Alert.alert(
-      'Delete account?',
-      'This is irreversible.',
-      [
-        { text:'Cancel', style:'cancel' },
-        { text:'Delete', style:'destructive', onPress: deleteAccount }
-      ]
-    );
-  };
-
+  // delete account completely
   const deleteAccount = async () => {
     try {
       await client.delete('profile/delete/');
@@ -162,70 +152,111 @@ export default function AccountScreen({ navigation }) {
       await SecureStore.deleteItemAsync('refreshToken');
       navigation.replace('Login');
     } catch {
-      Alert.alert('Error','Could not delete account.');
+      Alert.alert('Error', 'Could not delete account.');
     }
   };
 
+  const handleDelete = () => {
+    Alert.alert(
+      'Delete Account?',
+      'This cannot be undone.',
+      [
+        { text: 'Cancel',  style: 'cancel' },
+        { text: 'Delete',  style: 'destructive', onPress: deleteAccount },
+      ]
+    );
+  };
+
+  // logout (move here from Groups!)
+  const handleLogout = async () => {
+    await SecureStore.deleteItemAsync('accessToken');
+    await SecureStore.deleteItemAsync('refreshToken');
+    navigation.replace('Welcome');
+  };
+
   if (loading) {
-    return <ActivityIndicator style={{flex:1}} size="large" />;
+    return <ActivityIndicator style={{ flex: 1 }} size="large" />;
   }
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: '#fff' }}>
-      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+    <SafeAreaView style={styles.flex}>
+      <KeyboardAvoidingView
+        style={styles.flex}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      >
+        {/* Header with Logout */}
+        <View style={styles.header}>
+          <Text style={styles.headerTitle}>Account</Text>
+          <TouchableOpacity onPress={handleLogout}>
+            <Text style={styles.logoutText}>Logout</Text>
+          </TouchableOpacity>
+        </View>
+
         <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
           <ScrollView contentContainerStyle={styles.container}>
-          {avatarUri ? (
-            <Image source={{ uri: avatarUri }} style={styles.avatar}/>
-          ) : (
-            <View style={styles.avatarPlaceholder}>
-              <Text>No Photo</Text>
-            </View>
-          )}
-          <Button title="Change Photo" onPress={pickImage} />
-          {!hasLibraryPermission && (
-            <Text style={styles.hint}>
-              Tap again to select from your photos.
-            </Text>
-          )}
+            {avatarUri ? (
+              <Image source={{ uri: avatarUri }} style={styles.avatar} />
+            ) : (
+              <View style={styles.avatarPlaceholder}>
+                <Ionicons name="person-circle" size={100} color="#bbb" />
+              </View>
+            )}
 
-          <Text style={styles.label}>First Name</Text>
-          <TextInput
-            value={firstName}
-            onChangeText={setFirstName}
-            style={styles.input}
-          />
+            <TouchableOpacity onPress={pickImage}>
+              <Text style={styles.changePhoto}>Change Photo</Text>
+            </TouchableOpacity>
 
-          <Text style={styles.label}>Last Name</Text>
-          <TextInput
-            value={lastName}
-            onChangeText={setLastName}
-            style={styles.input}
-          />
+            {!hasLibraryPermission && (
+              <Text style={styles.hint}>
+                Tap again to select from your photos.
+              </Text>
+            )}
 
-          <Text style={styles.label}>Email</Text>
-          <TextInput
-            value={email}
-            onChangeText={setEmail}
-            keyboardType="email-address"
-            style={styles.input}
-          />
-
-          <View style={styles.button}>
-            <Button
-              title={saving ? 'Saving...' : 'Save'}
-              onPress={handleSave}
-              disabled={saving}
+            <Text style={styles.label}>First Name</Text>
+            <TextInput
+              value={firstName}
+              onChangeText={setFirstName}
+              style={styles.input}
             />
-          </View>
 
-          <View style={styles.button}>
-            <Button
-              title="Delete Account"
+            <Text style={styles.label}>Last Name</Text>
+            <TextInput
+              value={lastName}
+              onChangeText={setLastName}
+              style={styles.input}
+            />
+
+            <Text style={styles.label}>Email</Text>
+            <TextInput
+              value={email}
+              onChangeText={setEmail}
+              keyboardType="email-address"
+              style={styles.input}
+            />
+
+            {/* Save Button */}
+            {saving ? (
+              <ActivityIndicator
+                style={{ marginTop: 24 }}
+                size="large"
+                color="#E91E63"
+              />
+            ) : (
+              <TouchableOpacity
+                style={styles.primaryButton}
+                onPress={handleSave}
+              >
+                <Text style={styles.primaryText}>Save</Text>
+              </TouchableOpacity>
+            )}
+
+            {/* Delete Account */}
+            <TouchableOpacity
+              style={styles.destructiveButton}
               onPress={handleDelete}
-              color="red"
-            />
-          </View>
+            >
+              <Text style={styles.destructiveText}>Delete Account</Text>
+            </TouchableOpacity>
           </ScrollView>
         </TouchableWithoutFeedback>
       </KeyboardAvoidingView>
@@ -234,18 +265,108 @@ export default function AccountScreen({ navigation }) {
 }
 
 const styles = StyleSheet.create({
-  container: { flexGrow:1, padding:20, backgroundColor:'#fff' },
-  avatar:    { width:100, height:100, borderRadius:50, alignSelf:'center', marginBottom:16 },
+  flex: {
+    flex: 1,
+    backgroundColor: '#fff',
+  },
+
+  // — Header —
+  header: {
+    flexDirection: 'row',
+    paddingHorizontal: 20,
+    paddingTop: Platform.OS === 'ios' ? 12 : 20,
+    paddingBottom: 12,
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    borderBottomColor: '#eee',
+    borderBottomWidth: 1,
+  },
+  headerTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#333',
+  },
+  logoutText: {
+    color: '#E91E63',
+    fontSize: 16,
+    fontWeight: '500',
+  },
+
+  container: {
+    padding: 20,
+    paddingBottom: 40,
+  },
+
+  avatar: {
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    alignSelf: 'center',
+    marginBottom: 16,
+  },
   avatarPlaceholder: {
-    width:100, height:100, borderRadius:50,
-    backgroundColor:'#eee', alignItems:'center', justifyContent:'center',
-    alignSelf:'center', marginBottom:16
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    backgroundColor: '#eee',
+    alignItems: 'center',
+    justifyContent: 'center',
+    alignSelf: 'center',
+    marginBottom: 16,
   },
-  hint:      { textAlign:'center', marginVertical:8, color:'#666' },
-  label:     { marginTop:12, fontWeight:'600' },
-  input:     {
-    height:40, borderColor:'#ccc', borderWidth:1, borderRadius:4,
-    paddingHorizontal:8, marginTop:4
+
+  changePhoto: {
+    alignSelf: 'center',
+    color: '#1976D2',
+    fontSize: 16,
+    marginBottom: 12,
   },
-  button:    { marginTop:20 }
+  hint: {
+    textAlign: 'center',
+    marginBottom: 16,
+    color: '#666',
+  },
+
+  label: {
+    fontSize: 14,
+    fontWeight: '500',
+    marginBottom: 4,
+    color: '#333',
+  },
+  input: {
+    height: 44,
+    borderColor: '#ccc',
+    borderWidth: 1,
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    marginBottom: 16,
+    fontSize: 16,
+  },
+
+  primaryButton: {
+    backgroundColor: '#E91E63',
+    paddingVertical: 14,
+    borderRadius: 8,
+    marginTop: 8,
+  },
+  primaryText: {
+    color: '#fff',
+    fontSize: 17,
+    fontWeight: '600',
+    textAlign: 'center',
+  },
+
+  destructiveButton: {
+    paddingVertical: 14,
+    borderRadius: 8,
+    marginTop: 16,
+    borderWidth: 1,
+    borderColor: 'red',
+  },
+  destructiveText: {
+    color: 'red',
+    fontSize: 17,
+    fontWeight: '600',
+    textAlign: 'center',
+  },
 });
