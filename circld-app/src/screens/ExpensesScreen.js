@@ -97,7 +97,6 @@ export default function ExpensesScreen({ route, navigation }) {
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
     >
-      <Text style={styles.heading}>{name} • Expenses</Text>
 
       <FlatList
         data={expenses}

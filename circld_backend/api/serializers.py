@@ -10,11 +10,43 @@ from rest_framework.validators import UniqueValidator
 
 User = get_user_model()
 
+# api/serializers.py
+from django.core.exceptions import ObjectDoesNotExist
+from rest_framework import serializers
+from django.contrib.auth import get_user_model
+# from .serializers import ProfileSerializer
+
+User = get_user_model()
+
 class UserSerializer(serializers.ModelSerializer):
+    avatar   = serializers.SerializerMethodField()
+    is_admin = serializers.SerializerMethodField()
+
     class Meta:
-        model = User
-        # pick only the public fields you want to expose
-        fields = ['id', 'first_name', 'last_name', 'username', 'email']
+        model  = User
+        fields = ["id","first_name","last_name","avatar","is_admin"]
+
+    def get_avatar(self, user):
+        # don’t assume there’s always a profile
+        try:
+            profile = user.profile
+        except ObjectDoesNotExist:
+            return None
+
+        # if you still have the ProfileSerializer, you could do:
+        if not profile.avatar:
+            return None
+
+        request = self.context.get("request", None)
+        url     = profile.avatar.url
+        return request.build_absolute_uri(url) if request else url
+
+    def get_is_admin(self, user):
+        group_id = self.context.get("group_id")
+        if not group_id:
+            return False
+        return user.groups.filter(pk=group_id).exists()
+
 
 class GroupSerializer(serializers.ModelSerializer):
     members = serializers.PrimaryKeyRelatedField(

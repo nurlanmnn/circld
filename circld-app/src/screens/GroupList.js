@@ -68,7 +68,7 @@ export default function GroupList({ navigation }) {
           <TouchableOpacity
             style={styles.item}
             onPress={() =>
-              navigation.navigate('GroupDetail', {
+              navigation.navigate('GroupTabs', {
                 groupId: item.id,
                 name:    item.name,
               })
