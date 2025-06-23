@@ -24,7 +24,7 @@ class UserSerializer(serializers.ModelSerializer):
 
     class Meta:
         model  = User
-        fields = ["id","first_name","last_name","avatar","is_admin"]
+        fields = ["id", "first_name", "last_name", "username", "avatar", "is_admin"]
 
     def get_avatar(self, user):
         # don’t assume there’s always a profile

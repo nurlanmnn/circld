@@ -54,13 +54,11 @@ export default function SignupScreen({ navigation }) {
         password2,
       });
       if (registerRes.status === 201) {
-        const tokenRes = await client.post('token/', {
+        navigation.replace('VerifyCode', {
+          email: email.trim().toLowerCase(),
           username: username.trim(),
-          password,
+          password, // if needed later
         });
-        await SecureStore.setItemAsync('accessToken', tokenRes.data.access);
-        await SecureStore.setItemAsync('refreshToken', tokenRes.data.refresh);
-        navigation.replace('Groups');
       }
     } catch (err) {
       let msg = 'Something went wrong.';

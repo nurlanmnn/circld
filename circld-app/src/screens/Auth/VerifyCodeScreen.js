@@ -8,8 +8,6 @@ import {
   StyleSheet,
   Text,
   ActivityIndicator,
-
-  // new imports for keyboard handling
   KeyboardAvoidingView,
   Platform,
   TouchableWithoutFeedback,

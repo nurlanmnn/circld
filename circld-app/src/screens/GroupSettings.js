@@ -74,33 +74,6 @@ export default function GroupSettings({ route }) {
         </TouchableOpacity>
       </View>
 
-      {/* Members List */}
-      <Text style={[styles.sectionHeader, { color: colors.text }]}>
-        Members
-      </Text>
-      <FlatList
-        data={members}
-        keyExtractor={(m, i) => String(m.id ?? i)}
-        renderItem={({ item }) => (
-          <View style={styles.memberRow}>
-            <Text style={[styles.memberName, { color: colors.text }]}>
-              {item.first_name} {item.last_name}
-            </Text>
-            <Text
-              style={[
-                styles.memberRole,
-                { color: item.is_admin ? PINK : colors.text },
-              ]}
-            >
-              {item.is_admin ? 'Admin' : 'Member'}
-            </Text>
-          </View>
-        )}
-        ItemSeparatorComponent={() => (
-          <View style={[styles.separator, { backgroundColor: '#eee' }]} />
-        )}
-        contentContainerStyle={{ paddingBottom: 24 }}
-      />
     </View>
   );
 }
@@ -139,23 +112,10 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontWeight: '600',
   },
-
   sectionHeader: {
     fontSize: 16,
     fontWeight: '600',
     marginBottom: 12,
-  },
-  memberRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    paddingVertical: 12,
-  },
-  memberName: {
-    fontSize: 16,
-  },
-  memberRole: {
-    fontSize: 14,
-    fontWeight: '600',
   },
   separator: {
     height: 1,
