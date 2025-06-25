@@ -14,6 +14,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme, useNavigation, useRoute } from '@react-navigation/native';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { client } from '../api/client';
+import * as Clipboard from 'expo-clipboard';
+import { Alert } from 'react-native';
 
 export default function GroupSettings() {
   const insets = useSafeAreaInsets();
@@ -27,6 +29,20 @@ export default function GroupSettings() {
   const { data: group, isLoading } = useQuery({
     queryKey: ['group', groupId],
     queryFn: () => client.get(`groups/${groupId}/`).then(r => r.data),
+  });
+
+  const leaveMutation = useMutation({
+    mutationFn: () =>
+      client.post(`groups/${groupId}/leave/`),
+    onSuccess: () => {
+      // invalidate lists and go back to your groups list
+      qc.invalidateQueries({ queryKey: ['groups'] });
+      navigation.navigate('Groups');
+      Alert.alert('Left Group', 'You have successfully left the group.');
+    },
+    onError: () => {
+      Alert.alert('Error', 'Unable to leave group. Please try again.');
+    },
   });
 
   const { data: members = [], isLoading: membersLoading } = useQuery({
@@ -55,10 +71,14 @@ export default function GroupSettings() {
     );
   }
 
-  // copy invite code
-  const copyCode = () => {
-    // your clipboard logic here...
-    Alert.alert('Copied!', 'Invite code copied to clipboard.');
+  const copyCode = async () => {
+    if (!group?.invite_code) return;
+    try {
+      await Clipboard.setStringAsync(group.invite_code);
+      Alert.alert('Copied!', 'Invite code copied to clipboard.');
+    } catch (err) {
+      Alert.alert('Error', 'Could not copy invite code.');
+    }
   };
 
   // leave group
@@ -133,6 +153,7 @@ export default function GroupSettings() {
         </View>
       </View>
 
+      <Text style={styles.name}>Members</Text>
       {/* Members list */}
       <FlatList
         data={members}
@@ -160,11 +181,13 @@ export default function GroupSettings() {
       {/* Leave group */}
       <TouchableOpacity
         style={[styles.leaveBtn, { borderColor: colors.notification }]}
-        onPress={leaveGroup}
+        onPress={() => leaveMutation.mutate()}
+        disabled={leaveMutation.isLoading}
       >
-        <Text style={styles.leaveText}>
-          Leave Group
-        </Text>
+        {leaveMutation.isLoading
+         ? <ActivityIndicator color={colors.notification} />
+         : <Text style={styles.leaveText}>Leave Group</Text>
+        }
       </TouchableOpacity>
     </View>
   );
@@ -174,7 +197,12 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
   center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
 
-  back: { position: 'absolute', top: 16, left: 16, zIndex: 10 },
+  back: { 
+    position: 'absolute', 
+    top: 16, 
+    left: 16, 
+    zIndex: 10 
+  },
 
   row: {
     flexDirection: 'row',
@@ -211,7 +239,12 @@ const styles = StyleSheet.create({
     borderRadius: 6,
   },
   codeText: { fontSize: 16 },
-  copyBtn: { marginLeft: 8, paddingHorizontal: 12, paddingVertical: 8, borderRadius: 6 },
+  copyBtn: { 
+    marginLeft: 8, 
+    paddingHorizontal: 12, 
+    paddingVertical: 8, 
+    borderRadius: 6
+  },
   copyText: { color: '#fff', fontWeight: '600' },
 
   memberRow: { flexDirection: 'row', alignItems: 'center', padding: 16 },
