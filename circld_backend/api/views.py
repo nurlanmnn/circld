@@ -5,6 +5,8 @@ from django.contrib.auth import get_user_model
 from rest_framework import viewsets, permissions, status, generics
 from django.shortcuts import get_object_or_404
 from rest_framework.decorators import action
+
+from .permissions import IsGroupOwner
 from .models import Group, Expense, Message, Profile
 from .serializers import (
     UserSerializer, 
@@ -66,7 +68,15 @@ class GroupViewSet(viewsets.ModelViewSet):
 
         # pass both `request` (for URL-building) and `group_id`
         ctx = {'request': request, 'group_id': group.id}
-        serializer = UserSerializer(users, many=True, context=ctx)
+        serializer = UserSerializer(
+            users,
+            many=True,
+            context={
+              "request": request,
+              # pass the group so the serializer knows who the owner is
+              "group_id": group.pk,
+            }
+        )
         return Response(serializer.data)
 
     @action(detail=False, methods=['post'], url_path='join')
@@ -80,6 +90,40 @@ class GroupViewSet(viewsets.ModelViewSet):
 
         group = get_object_or_404(Group, invite_code=code)
         group.members.add(request.user)
+        return Response(self.get_serializer(group).data)
+    
+    def get_permissions(self):
+        # owner-only endpoints:
+        if self.action in ['destroy', 'remove_member', 'rename']:
+            return [permissions.IsAuthenticated(), IsGroupOwner()]
+        return super().get_permissions()
+
+    @action(detail=True, methods=['post'], url_path='leave')
+    def leave(self, request, pk=None):
+        """
+        POST /api/groups/{pk}/leave/
+        removes the requesting user from the group.
+        """
+        group = self.get_object()
+        group.members.remove(request.user)
+        return Response({'detail': 'Left the group'}, status=status.HTTP_200_OK)
+
+    @action(detail=True, methods=['post'], url_path='remove-member')
+    def remove_member(self, request, pk=None):
+        group = self.get_object()
+        user_id = request.data.get('user_id')
+        group.members.remove(user_id)
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+    @action(detail=True, methods=['patch'], url_path='rename')
+    def rename(self, request, pk=None):
+        group = self.get_object()
+        new_name = request.data.get('name', '').strip()
+        if not new_name:
+            return Response({'name': ['Required.']},
+                            status=status.HTTP_400_BAD_REQUEST)
+        group.name = new_name
+        group.save()
         return Response(self.get_serializer(group).data)
 
 class ExpenseViewSet(viewsets.ModelViewSet):

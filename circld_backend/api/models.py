@@ -35,7 +35,8 @@ class Group(models.Model):
     owner = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         related_name='owned_groups',
-        on_delete=models.CASCADE
+        on_delete=models.CASCADE,
+        editable=False
     )
     members = models.ManyToManyField(
         settings.AUTH_USER_MODEL,

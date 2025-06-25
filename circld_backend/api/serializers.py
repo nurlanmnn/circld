@@ -42,10 +42,13 @@ class UserSerializer(serializers.ModelSerializer):
         return request.build_absolute_uri(url) if request else url
 
     def get_is_admin(self, user):
-        group_id = self.context.get("group_id")
-        if not group_id:
+        # context['group_id'] comes from the ViewSet below
+        group_id = self.context['group_id']
+        try:
+            group = Group.objects.get(pk=group_id)
+        except Group.DoesNotExist:
             return False
-        return user.groups.filter(pk=group_id).exists()
+        return (group.owner_id == user.id)
 
 
 class GroupSerializer(serializers.ModelSerializer):

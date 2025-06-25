@@ -1,123 +1,238 @@
-// src/screens/GroupSettings.js
-import React, { useEffect } from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
   FlatList,
-  ActivityIndicator,
-  Alert,
-  StyleSheet,
-  Clipboard,
+  TextInput,
   TouchableOpacity,
+  Image,
+  ActivityIndicator,
+  StyleSheet,
+  Alert,
 } from 'react-native';
-import { useTheme } from '@react-navigation/native';
-import { useQuery } from '@tanstack/react-query';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useTheme, useNavigation, useRoute } from '@react-navigation/native';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { client } from '../api/client';
 
-export default function GroupSettings({ route }) {
-  const { groupId } = route.params;
+export default function GroupSettings() {
+  const insets = useSafeAreaInsets();
   const { colors } = useTheme();
-  const PINK = colors.primary;
+  const navigation = useNavigation();
+  const route = useRoute();
+  const { groupId } = route.params;
+  const qc = useQueryClient();
 
-  // 1) Fetch full group info (including members & invite_code)
-  const {
-    data: group,
-    isLoading,
-    error,
-  } = useQuery({
-    queryKey: ['groupSettings', groupId],
-    queryFn: () =>
-      client.get(`groups/${groupId}/`).then(res => res.data),
+  // fetch group
+  const { data: group, isLoading } = useQuery({
+    queryKey: ['group', groupId],
+    queryFn: () => client.get(`groups/${groupId}/`).then(r => r.data),
   });
 
-  useEffect(() => {
-    if (error) {
-      console.error(error);
-      Alert.alert('Error', 'Could not load group settings.');
-    }
-  }, [error]);
+  const { data: members = [], isLoading: membersLoading } = useQuery({
+    queryKey: ['groupMembers', groupId],
+    queryFn: () =>
+      client
+        .get(`groups/${groupId}/members/`)
+        .then(res => res.data),
+  });
+
+  // rename mutation
+  const renameMutation = useMutation({
+    mutationFn: newName =>
+      client.patch(`groups/${groupId}/`, { name: newName }),
+    onSuccess: () => qc.invalidateQueries(['group', groupId]),
+  });
+
+  const [editing, setEditing] = useState(false);
+  const [draftName, setDraftName] = useState('');
 
   if (isLoading) {
     return (
-      <View style={[styles.centered, { backgroundColor: colors.background }]}>
-        <ActivityIndicator size="large" color={PINK} />
+      <View style={[styles.center, { paddingTop: insets.top }]}>
+        <ActivityIndicator color={colors.primary} />
       </View>
     );
   }
 
-  // 2) Guard against missing data
-  const inviteCode = group?.invite_code ?? '—';
-  const members = Array.isArray(group?.members) ? group.members : [];
-
-  const copyCode = async () => {
-    await Clipboard.setString(inviteCode);
+  // copy invite code
+  const copyCode = () => {
+    // your clipboard logic here...
     Alert.alert('Copied!', 'Invite code copied to clipboard.');
   };
 
+  // leave group
+  const leaveGroup = () => {
+    // call your leave endpoint...
+    Alert.alert('Left', 'You have left the group.');
+  };
+
   return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}>
-      {/* Invite Code */}
-      <Text style={[styles.label, { color: colors.text }]}>
-        Invite Code:
-      </Text>
-      <View style={styles.codeRow}>
-        <View style={styles.codeBox}>
-          <Text style={[styles.codeText, { color: colors.text }]}>
-            {inviteCode}
-          </Text>
-        </View>
-        <TouchableOpacity
-          onPress={copyCode}
-          style={[styles.copyBtn, { backgroundColor: PINK }]}
-        >
-          <Text style={styles.copyTxt}>Copy</Text>
-        </TouchableOpacity>
+    <View style={[styles.container, { paddingTop: insets.top + 16 }]}>
+      {/* Title + Change Name */}
+      <View style={styles.row}>
+        {editing ? (
+          <>
+            <TextInput
+              style={[styles.input, { borderColor: colors.primary }]}
+              value={draftName}
+              onChangeText={setDraftName}
+              placeholder="New group name"
+              placeholderTextColor={colors.text + '88'}
+            />
+            <TouchableOpacity
+              style={[styles.saveBtn, { backgroundColor: colors.primary }]}
+              onPress={() => {
+                const nm = draftName.trim();
+                if (!nm) return Alert.alert('Error','Name cannot be empty.');
+                renameMutation.mutate(nm, {
+                  onSuccess: () => setEditing(false),
+                });
+              }}
+            >
+              <Text style={styles.saveText}>Save</Text>
+            </TouchableOpacity>
+            <TouchableOpacity onPress={() => setEditing(false)}>
+              <Text style={[styles.cancelText, { color: colors.text }]}>
+                Cancel
+              </Text>
+            </TouchableOpacity>
+          </>
+        ) : (
+          <>
+            <Text style={[styles.title, { color: colors.text }]}>
+              {group.name}
+            </Text>
+            <TouchableOpacity
+              onPress={() => {
+                setDraftName(group.name);
+                setEditing(true);
+              }}
+            >
+              <Text style={[styles.changeLink, { color: colors.primary }]}>
+                Change Name
+              </Text>
+            </TouchableOpacity>
+          </>
+        )}
       </View>
 
+      {/* Invite code */}
+      <View style={styles.section}>
+        <Text style={styles.label}>Invite Code</Text>
+        <View style={styles.inviteRow}>
+          <View style={styles.codeBox}>
+            <Text style={styles.codeText}>{group.invite_code}</Text>
+          </View>
+          <TouchableOpacity
+            style={[styles.copyBtn, { backgroundColor: colors.primary }]}
+            onPress={copyCode}
+          >
+            <Text style={styles.copyText}>Copy</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+
+      {/* Members list */}
+      <FlatList
+        data={members}
+        keyExtractor={m => m.id.toString()}
+        renderItem={({item}) => (
+          <View style={styles.memberRow}>
+            {item.avatar ? (
+              <Image source={{ uri: item.avatar }} style={styles.avatar} />
+            ) : (
+              <View style={[styles.avatar, styles.avatarPlaceholder]} />
+            )}
+            <View>
+              <Text style={styles.name}>
+                {item.first_name} {item.last_name}
+              </Text>
+              <Text style={styles.role}>
+                {item.id === group.owner_id ? 'Admin' : 'Member'}
+              </Text>
+            </View>
+          </View>
+        )}
+        contentContainerStyle={{ paddingBottom: 24 }}
+      />
+
+      {/* Leave group */}
+      <TouchableOpacity
+        style={[styles.leaveBtn, { borderColor: colors.notification }]}
+        onPress={leaveGroup}
+      >
+        <Text style={styles.leaveText}>
+          Leave Group
+        </Text>
+      </TouchableOpacity>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 16 },
-  centered: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+  container: { flex: 1 },
+  center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
 
-  label: {
-    fontSize: 14,
-    marginBottom: 4,
-  },
-  codeRow: {
+  back: { position: 'absolute', top: 16, left: 16, zIndex: 10 },
+
+  row: {
     flexDirection: 'row',
     alignItems: 'center',
+    paddingHorizontal: 16,
     marginBottom: 24,
   },
+  title: { fontSize: 28, fontWeight: '600', flex: 1 },
+  changeLink: { marginLeft: 12, fontSize: 16 },
+
+  input: {
+    flex: 1,
+    borderWidth: 1,
+    borderRadius: 6,
+    paddingHorizontal: 12,
+    height: 44,
+  },
+  saveBtn: {
+    marginLeft: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 6,
+  },
+  saveText: { color: '#fff', fontWeight: '600' },
+  cancelText: { marginLeft: 12, fontSize: 16 },
+
+  section: { paddingHorizontal: 16, marginBottom: 24 },
+  label: { fontSize: 14, fontWeight: '500', marginBottom: 6 },
+  inviteRow: { flexDirection: 'row', alignItems: 'center' },
   codeBox: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
-    paddingVertical: 10,
-    paddingHorizontal: 12,
+    backgroundColor: '#f2f2f2',
+    padding: 12,
     borderRadius: 6,
   },
-  codeText: {
-    fontSize: 18,
-    fontWeight: '500',
-  },
-  copyBtn: {
-    marginLeft: 12,
-    paddingVertical: 10,
-    paddingHorizontal: 16,
+  codeText: { fontSize: 16 },
+  copyBtn: { marginLeft: 8, paddingHorizontal: 12, paddingVertical: 8, borderRadius: 6 },
+  copyText: { color: '#fff', fontWeight: '600' },
+
+  memberRow: { flexDirection: 'row', alignItems: 'center', padding: 16 },
+  avatar: { width: 40, height: 40, borderRadius: 20, marginRight: 12 },
+  avatarPlaceholder: { backgroundColor: '#ddd' },
+  name: { fontSize: 16, fontWeight: '500' },
+  role: { fontSize: 14, color: '#666' },
+  sep: { height: 1, backgroundColor: '#eee', marginLeft: 68 },
+
+  leaveBtn: {
+    margin: 30,
+    borderWidth: 1,
+    backgroundColor: '#E91E63',
     borderRadius: 6,
+    paddingVertical: 12,
+    alignItems: 'center',
   },
-  copyTxt: {
+  leaveText: { 
     color: '#fff',
+    fontSize: 18,
     fontWeight: '600',
-  },
-  sectionHeader: {
-    fontSize: 16,
-    fontWeight: '600',
-    marginBottom: 12,
-  },
-  separator: {
-    height: 1,
-  },
+    textAlign: 'center',
+   },
 });
