@@ -49,6 +49,9 @@ class UserSerializer(serializers.ModelSerializer):
 
 
 class GroupSerializer(serializers.ModelSerializer):
+    owner_id       = serializers.ReadOnlyField(source='owner.id')
+    owner_username = serializers.ReadOnlyField(source='owner.username')
+
     members = serializers.PrimaryKeyRelatedField(
         many=True,
         queryset=User.objects.all(),
@@ -58,7 +61,7 @@ class GroupSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Group
-        fields = ['id', 'name', 'members', 'invite_code']
+        fields = ['id', 'name', 'members', 'invite_code', 'owner_id', 'owner_username']
 
 class ExpenseSerializer(serializers.ModelSerializer):
     paid_by_username = serializers.CharField(source='paid_by.username', read_only=True)

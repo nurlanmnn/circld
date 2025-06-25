@@ -32,6 +32,11 @@ def generate_invite_code():
 
 class Group(models.Model):
     name = models.CharField(max_length=100)
+    owner = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        related_name='owned_groups',
+        on_delete=models.CASCADE
+    )
     members = models.ManyToManyField(
         settings.AUTH_USER_MODEL,
         related_name='circld_groups',        # avoids clash with auth.User.groups

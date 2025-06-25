@@ -1,5 +1,5 @@
 from django.shortcuts import render
-
+from django.db.models import Q
 from rest_framework.response import Response
 from django.contrib.auth import get_user_model
 from rest_framework import viewsets, permissions, status, generics
@@ -39,11 +39,20 @@ class GroupViewSet(viewsets.ModelViewSet):
     permission_classes  = [permissions.IsAuthenticated]
 
     def get_queryset(self):
-        return Group.objects.filter(members=self.request.user)\
-                            .prefetch_related('members')
+        me = self.request.user
+        return (
+            Group.objects
+                 .filter(
+                   Q(members=me)    # any group you’re a member of
+                   | Q(owner=me)    # or any group you created
+                 )
+                 .distinct()
+                 .prefetch_related('members')
+        )
 
     def perform_create(self, serializer):
-        group = serializer.save()
+        # pass the logged-in user in as owner
+        group = serializer.save(owner=self.request.user)
         group.members.add(self.request.user)
 
     @action(detail=True, methods=['get'], url_path='members')
