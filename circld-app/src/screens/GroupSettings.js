@@ -1,3 +1,4 @@
+// src/screens/GroupSettings.js
 import React, { useState } from 'react';
 import {
   View,
@@ -6,266 +7,307 @@ import {
   TextInput,
   TouchableOpacity,
   Image,
-  ActivityIndicator,
   StyleSheet,
   Alert,
+  ActivityIndicator,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme, useNavigation, useRoute } from '@react-navigation/native';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { client } from '../api/client';
+import { Ionicons } from '@expo/vector-icons';
 import * as Clipboard from 'expo-clipboard';
-import { Alert } from 'react-native';
+import { client } from '../api/client';
 
 export default function GroupSettings() {
   const insets = useSafeAreaInsets();
   const { colors } = useTheme();
   const navigation = useNavigation();
-  const route = useRoute();
-  const { groupId } = route.params;
+  const { groupId } = useRoute().params;
   const qc = useQueryClient();
 
-  // fetch group
-  const { data: group, isLoading } = useQuery({
+  // Fetch group detail
+  const { data: group, isLoading: loadingGroup } = useQuery({
     queryKey: ['group', groupId],
     queryFn: () => client.get(`groups/${groupId}/`).then(r => r.data),
   });
 
+  // Fetch members
+  const { data: members = [], isLoading: loadingMembers } = useQuery({
+    queryKey: ['groupMembers', groupId],
+    queryFn: () => client.get(`groups/${groupId}/members/`).then(r => r.data),
+  });
+
+  // Leave group mutation
   const leaveMutation = useMutation({
-    mutationFn: () =>
-      client.post(`groups/${groupId}/leave/`),
+    mutationFn: () => client.post(`groups/${groupId}/leave/`),
     onSuccess: () => {
-      // invalidate lists and go back to your groups list
-      qc.invalidateQueries({ queryKey: ['groups'] });
+      qc.invalidateQueries(['groups']);
       navigation.navigate('Groups');
       Alert.alert('Left Group', 'You have successfully left the group.');
     },
-    onError: () => {
-      Alert.alert('Error', 'Unable to leave group. Please try again.');
-    },
+    onError: () => Alert.alert('Error', 'Could not leave group.'),
   });
 
-  const { data: members = [], isLoading: membersLoading } = useQuery({
-    queryKey: ['groupMembers', groupId],
-    queryFn: () =>
-      client
-        .get(`groups/${groupId}/members/`)
-        .then(res => res.data),
-  });
-
-  // rename mutation
+  // Rename group mutation
   const renameMutation = useMutation({
-    mutationFn: newName =>
-      client.patch(`groups/${groupId}/`, { name: newName }),
-    onSuccess: () => qc.invalidateQueries(['group', groupId]),
+    mutationFn: newName => client.patch(`groups/${groupId}/`, { name: newName }),
+    onSuccess: () => {
+      qc.invalidateQueries(['group', groupId]);
+      setEditing(false);
+    },
+    onError: () => Alert.alert('Error', 'Could not rename group.'),
   });
 
   const [editing, setEditing] = useState(false);
   const [draftName, setDraftName] = useState('');
 
-  if (isLoading) {
+  if (loadingGroup) {
     return (
       <View style={[styles.center, { paddingTop: insets.top }]}>
-        <ActivityIndicator color={colors.primary} />
+        <ActivityIndicator color={colors.primary} size="large" />
       </View>
     );
   }
 
   const copyCode = async () => {
-    if (!group?.invite_code) return;
-    try {
-      await Clipboard.setStringAsync(group.invite_code);
-      Alert.alert('Copied!', 'Invite code copied to clipboard.');
-    } catch (err) {
-      Alert.alert('Error', 'Could not copy invite code.');
-    }
+    await Clipboard.setStringAsync(group.invite_code);
+    Alert.alert('Copied!', 'Invite code copied to clipboard.');
   };
 
-  // leave group
-  const leaveGroup = () => {
-    // call your leave endpoint...
-    Alert.alert('Left', 'You have left the group.');
-  };
-
-  return (
-    <View style={[styles.container, { paddingTop: insets.top + 16 }]}>
-      {/* Title + Change Name */}
-      <View style={styles.row}>
-        {editing ? (
-          <>
-            <TextInput
-              style={[styles.input, { borderColor: colors.primary }]}
-              value={draftName}
-              onChangeText={setDraftName}
-              placeholder="New group name"
-              placeholderTextColor={colors.text + '88'}
-            />
-            <TouchableOpacity
-              style={[styles.saveBtn, { backgroundColor: colors.primary }]}
-              onPress={() => {
-                const nm = draftName.trim();
-                if (!nm) return Alert.alert('Error','Name cannot be empty.');
-                renameMutation.mutate(nm, {
-                  onSuccess: () => setEditing(false),
-                });
-              }}
-            >
-              <Text style={styles.saveText}>Save</Text>
-            </TouchableOpacity>
-            <TouchableOpacity onPress={() => setEditing(false)}>
-              <Text style={[styles.cancelText, { color: colors.text }]}>
-                Cancel
+  // Header for FlatList: group info + invite code
+  const ListHeader = () => (
+    <View style={{ paddingTop: insets.top, backgroundColor: '#F3F4F6' }}>
+      <View style={styles.card}>
+        <View style={styles.header}>
+          {editing ? (
+            <>
+              <TextInput
+                style={[styles.input, { borderColor: colors.primary }]}
+                value={draftName}
+                onChangeText={setDraftName}
+                placeholder="New group name"
+                placeholderTextColor={colors.text + '88'}
+              />
+              <TouchableOpacity
+                style={[styles.saveBtn, { backgroundColor: colors.primary }]}
+                onPress={() => {
+                  const nm = draftName.trim();
+                  if (!nm) return Alert.alert('Error', 'Name cannot be empty.');
+                  renameMutation.mutate(nm);
+                }}
+              >
+                <Text style={styles.saveText}>Save</Text>
+              </TouchableOpacity>
+              <TouchableOpacity onPress={() => setEditing(false)}>
+                <Text style={[styles.cancelText, { color: colors.text }]}>
+                  Cancel
+                </Text>
+              </TouchableOpacity>
+            </>
+          ) : (
+            <>
+              <Text style={[styles.title, { color: colors.text }]}>
+                {group.name}
               </Text>
-            </TouchableOpacity>
-          </>
-        ) : (
-          <>
-            <Text style={[styles.title, { color: colors.text }]}>
-              {group.name}
-            </Text>
-            <TouchableOpacity
-              onPress={() => {
-                setDraftName(group.name);
-                setEditing(true);
-              }}
-            >
-              <Text style={[styles.changeLink, { color: colors.primary }]}>
-                Change Name
-              </Text>
-            </TouchableOpacity>
-          </>
-        )}
-      </View>
-
-      {/* Invite code */}
-      <View style={styles.section}>
-        <Text style={styles.label}>Invite Code</Text>
-        <View style={styles.inviteRow}>
-          <View style={styles.codeBox}>
-            <Text style={styles.codeText}>{group.invite_code}</Text>
-          </View>
-          <TouchableOpacity
-            style={[styles.copyBtn, { backgroundColor: colors.primary }]}
-            onPress={copyCode}
-          >
-            <Text style={styles.copyText}>Copy</Text>
-          </TouchableOpacity>
+              <TouchableOpacity
+                onPress={() => {
+                  setDraftName(group.name);
+                  setEditing(true);
+                }}
+              >
+                <Text style={[styles.changeText, { color: colors.primary, marginTop: 4 }]}>
+                  Change Name
+                </Text>
+              </TouchableOpacity>
+            </>
+          )}
         </View>
-      </View>
-
-      <Text style={styles.name}>Members</Text>
-      {/* Members list */}
-      <FlatList
-        data={members}
-        keyExtractor={m => m.id.toString()}
-        renderItem={({item}) => (
-          <View style={styles.memberRow}>
-            {item.avatar ? (
-              <Image source={{ uri: item.avatar }} style={styles.avatar} />
-            ) : (
-              <View style={[styles.avatar, styles.avatarPlaceholder]} />
-            )}
-            <View>
-              <Text style={styles.name}>
-                {item.first_name} {item.last_name}
-              </Text>
-              <Text style={styles.role}>
-                {item.id === group.owner_id ? 'Admin' : 'Member'}
-              </Text>
+        <View style={styles.section}>
+          <Text style={styles.label}>Invite Code</Text>
+          <View style={styles.inviteRow}>
+            <View style={styles.codeBox}>
+              <Text style={styles.codeText}>{group.invite_code}</Text>
             </View>
+            <TouchableOpacity
+              style={[styles.copyBtn, { backgroundColor: colors.primary }]}
+              onPress={copyCode}
+            >
+              <Ionicons name="copy-outline" size={20} color="#fff" />
+              <Text style={styles.copyText}>Copy</Text>
+            </TouchableOpacity>
           </View>
-        )}
-        contentContainerStyle={{ paddingBottom: 24 }}
-      />
+        </View>
+        <Text style={styles.sectionTitle}>Members</Text>
+      </View>
+    </View>
+  );
 
-      {/* Leave group */}
+  // Footer for FlatList: Add Member + Leave
+  const ListFooter = () => (
+    <View>
       <TouchableOpacity
-        style={[styles.leaveBtn, { borderColor: colors.notification }]}
+        style={[styles.addBtn, { borderColor: colors.primary }]}
+        onPress={() => Alert.alert('Coming soon!', 'Add member flow is not implemented yet')}
+      >
+        <Ionicons name="person-add-outline" size={18} color={colors.primary} />
+        <Text style={[styles.addText, { color: colors.primary }]}>
+          Add Member
+        </Text>
+      </TouchableOpacity>
+
+      <TouchableOpacity
+        style={[styles.leaveBtn, { backgroundColor: colors.notification }]}
         onPress={() => leaveMutation.mutate()}
         disabled={leaveMutation.isLoading}
       >
-        {leaveMutation.isLoading
-         ? <ActivityIndicator color={colors.notification} />
-         : <Text style={styles.leaveText}>Leave Group</Text>
-        }
+        {leaveMutation.isLoading ? (
+          <ActivityIndicator color="#fff" />
+        ) : (
+          <Text style={styles.leaveText}>Leave Group</Text>
+        )}
       </TouchableOpacity>
     </View>
+  );
+
+  return (
+    <FlatList
+    data={members}
+    keyExtractor={m => m.id.toString()}
+    ListHeaderComponent={ListHeader}
+    ListFooterComponent={ListFooter}
+      renderItem={({ item }) => (
+        <View style={styles.memberRow}>
+          {item.avatar ? (
+            <Image source={{ uri: item.avatar }} style={styles.avatar} />
+          ) : (
+            <View style={[styles.avatar, styles.avatarPlaceholder]} />
+          )}
+          <View style={{ flex: 1 }}>
+            <Text style={styles.memberName}>
+              {item.first_name} {item.last_name}
+            </Text>
+            <Text style={styles.memberRole}>
+              {item.id === group.owner_id ? 'Admin' : 'Member'}
+            </Text>
+          </View>
+        </View>
+      )}
+      contentContainerStyle={{ paddingBottom: 32, backgroundColor: '#F3F4F6' }}
+      ListEmptyComponent={() =>
+        loadingMembers ? null : (
+          <View style={styles.center}>
+            <Text style={{ color: colors.text }}>No members found.</Text>
+          </View>
+        )
+      }
+    />
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1 },
-  center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+  center: { flex: 1, alignItems: 'center', marginTop: 20 },
 
-  back: { 
-    position: 'absolute', 
-    top: 16, 
-    left: 16, 
-    zIndex: 10 
+  card: {
+    backgroundColor: '#fff',
+    marginHorizontal: 16,
+    marginBottom: 16,
+    padding: 16,
+    borderRadius: 12,
+    shadowColor: '#000',
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 3,
   },
-
   row: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 16,
     marginBottom: 24,
   },
-  title: { fontSize: 28, fontWeight: '600', flex: 1 },
-  changeLink: { marginLeft: 12, fontSize: 16 },
+  header: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 16,
+  },
+
+  title: {
+    fontSize: 24, 
+    fontWeight: '600', 
+    textAlign: 'center',
+    marginBottom: 8
+  },
+
+  changeText: { 
+    fontSize: 16, 
+    fontWeight: '500',
+   },
 
   input: {
     flex: 1,
     borderWidth: 1,
     borderRadius: 6,
     paddingHorizontal: 12,
-    height: 44,
+    height: 40,
   },
   saveBtn: {
     marginLeft: 8,
-    paddingHorizontal: 16,
-    paddingVertical: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
     borderRadius: 6,
   },
   saveText: { color: '#fff', fontWeight: '600' },
   cancelText: { marginLeft: 12, fontSize: 16 },
 
-  section: { paddingHorizontal: 16, marginBottom: 24 },
-  label: { fontSize: 14, fontWeight: '500', marginBottom: 6 },
+  section: { marginTop: 16 },
+  label: { fontSize: 14, fontWeight: '500', marginBottom: 8 },
   inviteRow: { flexDirection: 'row', alignItems: 'center' },
   codeBox: {
     flex: 1,
-    backgroundColor: '#f2f2f2',
-    padding: 12,
+    backgroundColor: '#F3F4F6',
+    padding: 10,
+    borderRadius: 7,
+  },
+  codeText: { fontSize: 17 },
+  copyBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
     borderRadius: 6,
+    marginLeft: 8,
   },
-  codeText: { fontSize: 16 },
-  copyBtn: { 
-    marginLeft: 8, 
-    paddingHorizontal: 12, 
-    paddingVertical: 8, 
-    borderRadius: 6
-  },
-  copyText: { color: '#fff', fontWeight: '600' },
+  copyText: { color: '#fff', fontWeight: '600', marginLeft: 3 },
 
-  memberRow: { flexDirection: 'row', alignItems: 'center', padding: 16 },
+  sectionTitle: { fontSize: 18, fontWeight: '600', marginTop: 24 },
+
+  memberRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginHorizontal: 16,
+    marginBottom: 12,
+  },
   avatar: { width: 40, height: 40, borderRadius: 20, marginRight: 12 },
-  avatarPlaceholder: { backgroundColor: '#ddd' },
-  name: { fontSize: 16, fontWeight: '500' },
-  role: { fontSize: 14, color: '#666' },
-  sep: { height: 1, backgroundColor: '#eee', marginLeft: 68 },
+  avatarPlaceholder: { backgroundColor: '#DDD' },
+  memberName: { fontSize: 16, fontWeight: '500' },
+  memberRole: { fontSize: 14, color: '#666' },
+
+  addBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderRadius: 6,
+    padding: 12,
+    marginHorizontal: 16,
+    marginBottom: 16,
+  },
+  addText: { marginLeft: 6, fontSize: 14, fontWeight: '500' },
 
   leaveBtn: {
-    margin: 30,
-    borderWidth: 1,
-    backgroundColor: '#E91E63',
-    borderRadius: 6,
-    paddingVertical: 12,
+    marginHorizontal: 16,
+    paddingVertical: 14,
+    borderRadius: 8,
     alignItems: 'center',
   },
-  leaveText: { 
-    color: '#fff',
-    fontSize: 18,
-    fontWeight: '600',
-    textAlign: 'center',
-   },
+  leaveText: { color: '#fff', fontSize: 16, fontWeight: '600' },
 });
