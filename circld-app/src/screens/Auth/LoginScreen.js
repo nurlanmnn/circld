@@ -23,20 +23,45 @@ export default function LoginScreen({ navigation }) {
 
   const login = async () => {
     if (!username.trim() || !password) {
-      return Alert.alert('Missing fields', 'Enter both username/email and password.');
+      return Alert.alert(
+        'Missing fields',
+        'Enter both username/email and password.'
+      );
     }
+  
     try {
       const { data } = await client.post('token/', { username, password });
       await SecureStore.setItemAsync('accessToken', data.access);
       await SecureStore.setItemAsync('refreshToken', data.refresh);
       navigation.replace('Main');
     } catch (err) {
-      if (err.response?.status === 401) {
-        return Alert.alert('Email not verified','Please verify your email before logging in.');
+      const status = err.response?.status;
+      const detail = err.response?.data?.detail;
+  
+      if (status === 401) {
+        if (detail === 'Email not verified.') {
+          // your “please verify” flow
+          return Alert.alert(
+            'Email not verified',
+            'Please verify your email before logging in.'
+          );
+        } else {
+          // generic wrong-credentials flow
+          return Alert.alert(
+            'Login failed',
+            'Invalid username or password.'
+          );
+        }
       }
-      Alert.alert('Login failed', 'Check your credentials and try again.');
+  
+      // fallback for anything else
+      Alert.alert(
+        'Login failed',
+        'Something went wrong. Please try again.'
+      );
     }
   };
+  
 
   return (
     <KeyboardAvoidingView

@@ -14,7 +14,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { client }      from '../api/client';
-import * as Clipboard  from 'expo-clipboard';
+
 
 export default function ChatScreen({ route, navigation }) {
   const { groupId, name } = route.params;
@@ -91,6 +91,7 @@ export default function ChatScreen({ route, navigation }) {
       style={styles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
+      
     >
 
       <FlatList

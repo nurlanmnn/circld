@@ -3,13 +3,14 @@ import React, { useState } from 'react';
 import {
   View,
   Text,
-  FlatList,
+  ScrollView,
   TextInput,
   TouchableOpacity,
   Image,
   StyleSheet,
   Alert,
   ActivityIndicator,
+  Button
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme, useNavigation, useRoute } from '@react-navigation/native';
@@ -17,6 +18,8 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Ionicons } from '@expo/vector-icons';
 import * as Clipboard from 'expo-clipboard';
 import { client } from '../api/client';
+import { CommonActions } from '@react-navigation/native';
+
 
 export default function GroupSettings() {
   const insets = useSafeAreaInsets();
@@ -24,31 +27,50 @@ export default function GroupSettings() {
   const navigation = useNavigation();
   const { groupId } = useRoute().params;
   const qc = useQueryClient();
+  const [editing, setEditing] = useState(false);
+  const [draftName, setDraftName] = useState('');
 
-  // Fetch group detail
+  // 1) fetch group
   const { data: group, isLoading: loadingGroup } = useQuery({
     queryKey: ['group', groupId],
     queryFn: () => client.get(`groups/${groupId}/`).then(r => r.data),
   });
-
-  // Fetch members
+  // 2) fetch members
   const { data: members = [], isLoading: loadingMembers } = useQuery({
     queryKey: ['groupMembers', groupId],
     queryFn: () => client.get(`groups/${groupId}/members/`).then(r => r.data),
   });
 
-  // Leave group mutation
+  // 1) your “leave group” mutation definition:
   const leaveMutation = useMutation({
     mutationFn: () => client.post(`groups/${groupId}/leave/`),
     onSuccess: () => {
-      qc.invalidateQueries(['groups']);
-      navigation.navigate('Groups');
-      Alert.alert('Left Group', 'You have successfully left the group.');
+      qc.invalidateQueries(['groups'])
+      navigation.dispatch(
+        CommonActions.reset({
+          index: 0,
+          routes: [{ name: 'Groups' }],
+        })
+      )
+      Alert.alert('Left Group', 'You have successfully left the group.')
     },
     onError: () => Alert.alert('Error', 'Could not leave group.'),
   });
 
-  // Rename group mutation
+  // 2) show a “are you sure?” dialog
+  const confirmLeave = () => {
+    Alert.alert(
+      'Leave group?',
+      'Are you sure you want to leave this group?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Leave', style: 'destructive', onPress: () => leaveMutation.mutate() }
+      ]
+    );
+  };
+  
+
+  // rename mutation
   const renameMutation = useMutation({
     mutationFn: newName => client.patch(`groups/${groupId}/`, { name: newName }),
     onSuccess: () => {
@@ -58,8 +80,11 @@ export default function GroupSettings() {
     onError: () => Alert.alert('Error', 'Could not rename group.'),
   });
 
-  const [editing, setEditing] = useState(false);
-  const [draftName, setDraftName] = useState('');
+  // copy invite code
+  const copyCode = async () => {
+    await Clipboard.setStringAsync(group.invite_code);
+    Alert.alert('Copied!', 'Invite code copied to clipboard.');
+  };
 
   if (loadingGroup) {
     return (
@@ -69,91 +94,72 @@ export default function GroupSettings() {
     );
   }
 
-  const copyCode = async () => {
-    await Clipboard.setStringAsync(group.invite_code);
-    Alert.alert('Copied!', 'Invite code copied to clipboard.');
-  };
-
-  // Header for FlatList: group info + invite code
-  const ListHeader = () => (
-    <View style={{ paddingTop: insets.top, backgroundColor: '#F3F4F6' }}>
+  return (
+    <ScrollView
+      style={{ flex: 1, backgroundColor: '#F3F4F6' }}
+      contentContainerStyle={{ paddingBottom: 32, paddingTop: insets.top - 40 }}
+    >
+      {/* — Group Info Card — */}
       <View style={styles.card}>
-        <View style={styles.header}>
-          {editing ? (
-            <View style={styles.editContainer}>
-              <TextInput
-                style={[
-                  styles.editInput, 
-                  { 
-                    borderColor: colors.primary, 
-                    color: colors.text,
-                    backgroundColor: colors.card + '20' // Slightly transparent version of card color
-                  }
-                ]}
-                value={draftName}
-                onChangeText={setDraftName}
-                placeholder="Enter group name"
-                placeholderTextColor={colors.text + '66'}
-                autoFocus
-              />
-              <View style={styles.buttonRow}>
-                <TouchableOpacity 
-                  style={[
-                    styles.actionButton,
-                    styles.cancelBtn, 
-                    { 
-                      borderColor: colors.text + '33',
-                      backgroundColor: colors.card
-                    }
-                  ]}
-                  onPress={() => setEditing(false)}
-                >
-                  <Text style={[styles.actionButtonText, { color: colors.text }]}>
-                    Cancel
-                  </Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[
-                    styles.actionButton,
-                    styles.saveBtn, 
-                    { 
-                      backgroundColor: colors.primary,
-                      opacity: draftName.trim() ? 1 : 0.6
-                    }
-                  ]}
-                  onPress={() => {
-                    const nm = draftName.trim();
-                    if (!nm) return;
-                    renameMutation.mutate(nm);
-                  }}
-                  disabled={!draftName.trim()}
-                >
-                  {renameMutation.isLoading ? (
-                    <ActivityIndicator color="#fff" size="small" />
-                  ) : (
-                    <Text style={styles.actionButtonText}>Save</Text>
-                  )}
-                </TouchableOpacity>
-              </View>
-            </View>
-          ) : (
-            <>
-              <Text style={[styles.title, { color: colors.text }]}>
-                {group.name}
-              </Text>
+        {editing ? (
+          <>
+            <TextInput
+              style={[
+                styles.editInput,
+                {
+                  borderColor: colors.primary,
+                  backgroundColor: colors.card + '20',
+                  color: colors.text,
+                },
+              ]}
+              value={draftName}
+              onChangeText={setDraftName}
+              placeholder="Enter group name"
+              placeholderTextColor={colors.text + '66'}
+              autoFocus
+            />
+            <View style={styles.buttonRow}>
               <TouchableOpacity
-                onPress={() => {
-                  setDraftName(group.name);
-                  setEditing(true);
-                }}
+                style={[
+                  styles.cancelBtn,
+                  { borderColor: colors.text + '33', backgroundColor: colors.card },
+                ]}
+                onPress={() => setEditing(false)}
               >
-                <Text style={[styles.changeText, { color: colors.primary, marginTop: 4 }]}>
-                  Change Name
-                </Text>
+                <Text style={[styles.buttonText, { color: colors.text }]}>Cancel</Text>
               </TouchableOpacity>
-            </>
-          )}
-        </View>
+              <TouchableOpacity
+                style={[
+                  styles.saveBtn,
+                  { backgroundColor: colors.primary, opacity: draftName.trim() ? 1 : 0.6 },
+                ]}
+                disabled={!draftName.trim() || renameMutation.isLoading}
+                onPress={() => renameMutation.mutate(draftName.trim())}
+              >
+                {renameMutation.isLoading ? (
+                  <ActivityIndicator color="#fff" />
+                ) : (
+                  <Text style={styles.buttonText}>Save</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          </>
+        ) : (
+          <>
+            <Text style={[styles.title, { color: colors.text }]}>{group.name}</Text>
+            <TouchableOpacity
+              onPress={() => {
+                setDraftName(group.name);
+                setEditing(true);
+              }}
+            >
+              <Text style={[styles.changeText, { color: colors.primary }]}>
+                Change Name
+              </Text>
+            </TouchableOpacity>
+          </>
+        )}
+
         <View style={styles.section}>
           <Text style={styles.label}>Invite Code</Text>
           <View style={styles.inviteRow}>
@@ -169,75 +175,80 @@ export default function GroupSettings() {
             </TouchableOpacity>
           </View>
         </View>
-        <Text style={styles.sectionTitle}>Members</Text>
       </View>
-    </View>
-  );
 
-  // Footer for FlatList: Add Member + Leave
-  const ListFooter = () => (
-    <View>
-      <TouchableOpacity
-        style={[styles.addBtn, { borderColor: colors.primary }]}
-        onPress={() => Alert.alert('Coming soon!', 'Add member flow is not implemented yet')}
-      >
-        <Ionicons name="person-add-outline" size={18} color={colors.primary} />
-        <Text style={[styles.addText, { color: colors.primary }]}>
-          Add Member
-        </Text>
-      </TouchableOpacity>
+      {/* — Members Card — */}
+      <View style={styles.card}>
+        <Text style={styles.sectionTitle}>Members</Text>
+        {loadingMembers ? (
+          <ActivityIndicator style={{ marginTop: 16 }} color={colors.primary} />
+        ) : (
+          members.map(u => {
+            const isAdmin = u.id === group.owner_id;
+            return (
+              <View key={u.id} style={styles.memberRow}>
+                {u.avatar ? (
+                  <Image source={{ uri: u.avatar }} style={styles.avatar} />
+                ) : (
+                  <View style={[styles.avatar, styles.avatarPlaceholder]} />
+                )}
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.memberName}>
+                    {u.first_name} {u.last_name}
+                  </Text>
+                </View>
+                <View
+                  style={[
+                    styles.roleBadge,
+                    isAdmin ? styles.adminBadge : styles.memberBadge,
+                  ]}
+                >
+                  <Text
+                    style={[
+                      styles.roleText,
+                      isAdmin ? { color: '#fff' } : { color: '#555' },
+                    ]}
+                  >
+                    {isAdmin ? 'Admin' : 'Member'}
+                  </Text>
+                </View>
+              </View>
+            );
+          })
+        )}
 
+        <TouchableOpacity
+          style={[styles.addBtnFull, { backgroundColor: colors.primary }]}
+          onPress={() =>
+            Alert.alert('Coming soon!', 'Add member flow is not implemented yet')
+          }
+        >
+          <Ionicons name="person-add-outline" size={20} color="#fff" />
+          <Text style={[styles.addTextFull]}>Add Member</Text>
+        </TouchableOpacity>
+      </View>
+
+      {/* — Leave Group — */}
       <TouchableOpacity
-        style={[styles.leaveBtn, { backgroundColor: colors.notification }]}
-        onPress={() => leaveMutation.mutate()}
+        style={[
+          styles.leaveBtnFull,
+          { backgroundColor: colors.notification },
+        ]}
+        onPress={confirmLeave}
         disabled={leaveMutation.isLoading}
       >
         {leaveMutation.isLoading ? (
           <ActivityIndicator color="#fff" />
         ) : (
-          <Text style={styles.leaveText}>Leave Group</Text>
+          <Text style={styles.leaveTextFull}>Leave Group</Text>
         )}
       </TouchableOpacity>
-    </View>
-  );
-
-  return (
-    <FlatList
-    data={members}
-    keyExtractor={m => m.id.toString()}
-    ListHeaderComponent={ListHeader}
-    ListFooterComponent={ListFooter}
-      renderItem={({ item }) => (
-        <View style={styles.memberRow}>
-          {item.avatar ? (
-            <Image source={{ uri: item.avatar }} style={styles.avatar} />
-          ) : (
-            <View style={[styles.avatar, styles.avatarPlaceholder]} />
-          )}
-          <View style={{ flex: 1 }}>
-            <Text style={styles.memberName}>
-              {item.first_name} {item.last_name}
-            </Text>
-            <Text style={styles.memberRole}>
-              {item.id === group.owner_id ? 'Admin' : 'Member'}
-            </Text>
-          </View>
-        </View>
-      )}
-      contentContainerStyle={{ paddingBottom: 32, backgroundColor: '#F3F4F6' }}
-      ListEmptyComponent={() =>
-        loadingMembers ? null : (
-          <View style={styles.center}>
-            <Text style={{ color: colors.text }}>No members found.</Text>
-          </View>
-        )
-      }
-    />
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  center: { flex: 1, alignItems: 'center', marginTop: 20 },
+  center: { flex: 1, alignItems: 'center' },
 
   card: {
     backgroundColor: '#fff',
@@ -245,136 +256,144 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     padding: 16,
     borderRadius: 12,
+    // subtle shadow
     shadowColor: '#000',
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 3,
+    shadowOpacity: 0.05,
+    shadowRadius: 5,
+    elevation: 2,
   },
-  row: {
+
+  // — Group header —
+  title: {
+    fontSize: 24,
+    fontWeight: '600',
+    textAlign: 'center',
+    marginBottom: 8,
+  },
+  changeText: {
+    fontSize: 16,
+    fontWeight: '500',
+    textAlign: 'center',
+  },
+
+  section: {
+    marginTop: 16,
+  },
+  label: {
+    marginBottom: 6,
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  inviteRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 16,
-    marginBottom: 24,
   },
-  header: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 16,
-  },
-
-  title: {
-    fontSize: 24, 
-    fontWeight: '600', 
-    textAlign: 'center',
-    marginBottom: 8
-  },
-
-  changeText: { 
-    fontSize: 16, 
-    fontWeight: '500',
-   },
-
-  input: {
-    flex: 1,
-    borderWidth: 1,
-    borderRadius: 6,
-    paddingHorizontal: 12,
-    height: 40,
-  },
-  section: { marginTop: 16 },
-
-  label: { 
-    fontSize: 14, 
-    fontWeight: '500',
-    marginBottom: 8 ,
-  },
-  inviteRow: { flexDirection: 'row', alignItems: 'center' },
   codeBox: {
     flex: 1,
     backgroundColor: '#F3F4F6',
     padding: 10,
-    borderRadius: 7,
+    borderRadius: 8,
   },
-  codeText: { fontSize: 17 },
+  codeText: { fontSize: 16 },
   copyBtn: {
     flexDirection: 'row',
     alignItems: 'center',
+    marginLeft: 8,
     paddingHorizontal: 12,
     paddingVertical: 8,
-    borderRadius: 6,
-    marginLeft: 8,
+    borderRadius: 8,
   },
-  copyText: { color: '#fff', fontWeight: '600', marginLeft: 3 },
+  copyText: { color: '#fff', fontWeight: '600', marginLeft: 4 },
 
-  sectionTitle: { fontSize: 18, fontWeight: '600', marginTop: 24 },
-
+  // — Members —
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    marginBottom: 12,
+  },
   memberRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginHorizontal: 16,
     marginBottom: 12,
   },
-  avatar: { width: 40, height: 40, borderRadius: 20, marginRight: 12 },
+  avatar: { width:  40,	height:  40, borderRadius:  20,marginRight: 12 },
   avatarPlaceholder: { backgroundColor: '#DDD' },
   memberName: { fontSize: 16, fontWeight: '500' },
-  memberRole: { fontSize: 14, color: '#666' },
 
-  addBtn: {
+  roleBadge: {
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  adminBadge: {
+    backgroundColor: '#3B82F6',
+  },
+  memberBadge: {
+    backgroundColor: '#E5E7EB',
+  },
+  roleText: {
+    fontSize: 12,
+    fontWeight: '500',
+  },
+
+  addBtnFull: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 1,
-    borderRadius: 6,
-    padding: 12,
-    marginHorizontal: 16,
-    marginBottom: 16,
+    marginTop: 16,
+    paddingVertical: 12,
+    borderRadius: 8,
   },
-  addText: { marginLeft: 6, fontSize: 14, fontWeight: '500' },
+  addTextFull: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
+    marginLeft: 6,
+  },
 
-  leaveBtn: {
+  leaveBtnFull: {
     marginHorizontal: 16,
     paddingVertical: 14,
     borderRadius: 8,
     alignItems: 'center',
+    // marginTop: 150,
   },
-  leaveText: { color: '#fff', fontSize: 16, fontWeight: '600' },
-  editContainer: {
-    width: '100%',
-    paddingHorizontal: 8,
+  leaveTextFull: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
   },
+
+  // — Rename inputs —
   editInput: {
-    width: '100%',
     borderWidth: 1,
     borderRadius: 8,
     padding: 12,
-    fontSize: 20,
+    fontSize: 18,
     fontWeight: '600',
     marginBottom: 12,
   },
   buttonRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    width: '100%',
-  },
-  actionButton: {
-    flex: 1,
-    borderRadius: 8,
-    padding: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginHorizontal: 4,
-
-  },
-  actionButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: "#fff",
-
   },
   cancelBtn: {
+    flex: 1,
+    marginRight: 8,
     borderWidth: 1,
+    borderRadius: 8,
+    paddingVertical: 12,
+    alignItems: 'center',
   },
   saveBtn: {
-    borderWidth: 0,
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  buttonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#fff',
   },
 });
