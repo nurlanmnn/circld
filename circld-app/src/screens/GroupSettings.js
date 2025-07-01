@@ -80,30 +80,62 @@ export default function GroupSettings() {
       <View style={styles.card}>
         <View style={styles.header}>
           {editing ? (
-            <>
+            <View style={styles.editContainer}>
               <TextInput
-                style={[styles.input, { borderColor: colors.primary }]}
+                style={[
+                  styles.editInput, 
+                  { 
+                    borderColor: colors.primary, 
+                    color: colors.text,
+                    backgroundColor: colors.card + '20' // Slightly transparent version of card color
+                  }
+                ]}
                 value={draftName}
                 onChangeText={setDraftName}
-                placeholder="New group name"
-                placeholderTextColor={colors.text + '88'}
+                placeholder="Enter group name"
+                placeholderTextColor={colors.text + '66'}
+                autoFocus
               />
-              <TouchableOpacity
-                style={[styles.saveBtn, { backgroundColor: colors.primary }]}
-                onPress={() => {
-                  const nm = draftName.trim();
-                  if (!nm) return Alert.alert('Error', 'Name cannot be empty.');
-                  renameMutation.mutate(nm);
-                }}
-              >
-                <Text style={styles.saveText}>Save</Text>
-              </TouchableOpacity>
-              <TouchableOpacity onPress={() => setEditing(false)}>
-                <Text style={[styles.cancelText, { color: colors.text }]}>
-                  Cancel
-                </Text>
-              </TouchableOpacity>
-            </>
+              <View style={styles.buttonRow}>
+                <TouchableOpacity 
+                  style={[
+                    styles.actionButton,
+                    styles.cancelBtn, 
+                    { 
+                      borderColor: colors.text + '33',
+                      backgroundColor: colors.card
+                    }
+                  ]}
+                  onPress={() => setEditing(false)}
+                >
+                  <Text style={[styles.actionButtonText, { color: colors.text }]}>
+                    Cancel
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[
+                    styles.actionButton,
+                    styles.saveBtn, 
+                    { 
+                      backgroundColor: colors.primary,
+                      opacity: draftName.trim() ? 1 : 0.6
+                    }
+                  ]}
+                  onPress={() => {
+                    const nm = draftName.trim();
+                    if (!nm) return;
+                    renameMutation.mutate(nm);
+                  }}
+                  disabled={!draftName.trim()}
+                >
+                  {renameMutation.isLoading ? (
+                    <ActivityIndicator color="#fff" size="small" />
+                  ) : (
+                    <Text style={styles.actionButtonText}>Save</Text>
+                  )}
+                </TouchableOpacity>
+              </View>
+            </View>
           ) : (
             <>
               <Text style={[styles.title, { color: colors.text }]}>
@@ -249,17 +281,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     height: 40,
   },
-  saveBtn: {
-    marginLeft: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 6,
-  },
-  saveText: { color: '#fff', fontWeight: '600' },
-  cancelText: { marginLeft: 12, fontSize: 16 },
-
   section: { marginTop: 16 },
-  label: { fontSize: 14, fontWeight: '500', marginBottom: 8 },
+
+  label: { 
+    fontSize: 14, 
+    fontWeight: '500',
+    marginBottom: 8 ,
+  },
   inviteRow: { flexDirection: 'row', alignItems: 'center' },
   codeBox: {
     flex: 1,
@@ -310,4 +338,43 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   leaveText: { color: '#fff', fontSize: 16, fontWeight: '600' },
+  editContainer: {
+    width: '100%',
+    paddingHorizontal: 8,
+  },
+  editInput: {
+    width: '100%',
+    borderWidth: 1,
+    borderRadius: 8,
+    padding: 12,
+    fontSize: 20,
+    fontWeight: '600',
+    marginBottom: 12,
+  },
+  buttonRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    width: '100%',
+  },
+  actionButton: {
+    flex: 1,
+    borderRadius: 8,
+    padding: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginHorizontal: 4,
+
+  },
+  actionButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: "#fff",
+
+  },
+  cancelBtn: {
+    borderWidth: 1,
+  },
+  saveBtn: {
+    borderWidth: 0,
+  },
 });

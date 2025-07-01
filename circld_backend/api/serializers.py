@@ -13,10 +13,8 @@ User = get_user_model()
 # api/serializers.py
 from django.core.exceptions import ObjectDoesNotExist
 from rest_framework import serializers
-from django.contrib.auth import get_user_model
-# from .serializers import ProfileSerializer
 
-User = get_user_model()
+# from .serializers import ProfileSerializer
 
 class UserSerializer(serializers.ModelSerializer):
     avatar   = serializers.SerializerMethodField()
