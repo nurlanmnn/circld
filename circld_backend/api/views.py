@@ -100,13 +100,12 @@ class GroupViewSet(viewsets.ModelViewSet):
 
     @action(detail=True, methods=['post'], url_path='leave')
     def leave(self, request, pk=None):
-        """
-        POST /api/groups/{pk}/leave/
-        removes the requesting user from the group.
-        """
         group = self.get_object()
+        if group.members.count() == 1 and group.owner == request.user:
+            group.delete()
+            return Response(status=status.HTTP_204_NO_CONTENT)
         group.members.remove(request.user)
-        return Response({'detail': 'Left the group'}, status=status.HTTP_200_OK)
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
     @action(detail=True, methods=['post'], url_path='remove-member')
     def remove_member(self, request, pk=None):

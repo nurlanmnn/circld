@@ -30,41 +30,71 @@ export default function GroupSettings() {
   const [editing, setEditing] = useState(false);
   const [draftName, setDraftName] = useState('');
 
-  // 1) fetch group
+  // 1) get me
+  const {
+    data: me,
+    isLoading: loadingMe,
+    isError: errorMe,
+  } = useQuery({
+    queryKey: ['me'],
+    queryFn: () => client.get('profile/').then(res => res.data),
+  });
+
+  // 2) fetch group
   const { data: group, isLoading: loadingGroup } = useQuery({
     queryKey: ['group', groupId],
     queryFn: () => client.get(`groups/${groupId}/`).then(r => r.data),
   });
-  // 2) fetch members
+
+  // 3) fetch members
   const { data: members = [], isLoading: loadingMembers } = useQuery({
     queryKey: ['groupMembers', groupId],
     queryFn: () => client.get(`groups/${groupId}/members/`).then(r => r.data),
   });
 
-  // 1) your “leave group” mutation definition:
+  // 4) is last member or not
+  const myUserId = me?.user_id;
+  const isLastMember = 
+    !loadingMembers && 
+    members.length === 1 && 
+    group?.owner_id === myUserId;
+    
+  // 5) leave/delete mutation
   const leaveMutation = useMutation({
     mutationFn: () => client.post(`groups/${groupId}/leave/`),
     onSuccess: () => {
-      qc.invalidateQueries(['groups'])
+      // invalidate and reset to Groups list
+      qc.invalidateQueries({ queryKey: ['groups'] });
       navigation.dispatch(
         CommonActions.reset({
           index: 0,
           routes: [{ name: 'Groups' }],
         })
-      )
-      Alert.alert('Left Group', 'You have successfully left the group.')
+      );
+      Alert.alert(
+        isLastMember ? 'Deleted' : 'Left',
+        isLastMember
+          ? 'Your group has been deleted.'
+          : 'You have successfully left the group.'
+      );
     },
-    onError: () => Alert.alert('Error', 'Could not leave group.'),
+    onError: () => Alert.alert('Error', 'Could not leave group. Please try again.'),
   });
 
-  // 2) show a “are you sure?” dialog
+
   const confirmLeave = () => {
     Alert.alert(
-      'Leave group?',
-      'Are you sure you want to leave this group?',
+      isLastMember ? 'Delete group?' : 'Leave group?',
+      isLastMember
+        ? 'You are the only member. Deleting will permanently remove this group.'
+        : 'Are you sure you want to leave this group?',
       [
         { text: 'Cancel', style: 'cancel' },
-        { text: 'Leave', style: 'destructive', onPress: () => leaveMutation.mutate() }
+        {
+          text: isLastMember ? 'Delete' : 'Leave',
+          style: 'destructive',
+          onPress: () => leaveMutation.mutate(),
+        }
       ]
     );
   };
@@ -230,17 +260,16 @@ export default function GroupSettings() {
 
       {/* — Leave Group — */}
       <TouchableOpacity
-        style={[
-          styles.leaveBtnFull,
-          { backgroundColor: colors.notification },
-        ]}
+        style={[styles.leaveBtnFull, { backgroundColor: colors.notification }]}
         onPress={confirmLeave}
         disabled={leaveMutation.isLoading}
       >
         {leaveMutation.isLoading ? (
           <ActivityIndicator color="#fff" />
         ) : (
-          <Text style={styles.leaveTextFull}>Leave Group</Text>
+          <Text style={styles.leaveTextFull}>
+            {isLastMember ? 'Delete Group' : 'Leave Group'}
+          </Text>
         )}
       </TouchableOpacity>
     </ScrollView>

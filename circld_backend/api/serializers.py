@@ -40,13 +40,17 @@ class UserSerializer(serializers.ModelSerializer):
         return request.build_absolute_uri(url) if request else url
 
     def get_is_admin(self, user):
-        # context['group_id'] comes from the ViewSet below
-        group_id = self.context['group_id']
+        # try to pull group_id from the context; if it's missing, just return False
+        group_id = self.context.get('group_id')
+        if not group_id:
+            return False
+
         try:
             group = Group.objects.get(pk=group_id)
         except Group.DoesNotExist:
             return False
-        return (group.owner_id == user.id)
+
+        return group.owner_id == user.id
 
 
 class GroupSerializer(serializers.ModelSerializer):
@@ -195,6 +199,7 @@ class SignupSerializer(serializers.ModelSerializer):
     
 class ProfileSerializer(serializers.ModelSerializer):
     # Map the related User fields onto the Profile payload
+    user_id = serializers.IntegerField(source='user.id', read_only=True)
     first_name = serializers.CharField(
         source='user.first_name', required=False
     )
@@ -210,6 +215,7 @@ class ProfileSerializer(serializers.ModelSerializer):
     class Meta:
         model = Profile
         fields = [
+            'user_id',
             'first_name',
             'last_name',
             'email',
