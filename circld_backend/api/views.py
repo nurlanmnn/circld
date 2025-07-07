@@ -100,19 +100,62 @@ class GroupViewSet(viewsets.ModelViewSet):
 
     @action(detail=True, methods=['post'], url_path='leave')
     def leave(self, request, pk=None):
+        """
+        POST /api/groups/{pk}/leave/
+        - If the leaving user is the owner **and** there are other members,
+          auto-promote the next member as owner.
+        - If they were the last member, delete the group.
+        - Otherwise just remove them from members.
+        """
         group = self.get_object()
-        if group.members.count() == 1 and group.owner == request.user:
-            group.delete()
-            return Response(status=status.HTTP_204_NO_CONTENT)
-        group.members.remove(request.user)
-        return Response(status=status.HTTP_204_NO_CONTENT)
+        me    = request.user
 
-    @action(detail=True, methods=['post'], url_path='remove-member')
+        # 1) must be a member
+        if not group.members.filter(pk=me.pk).exists():
+            return Response(status=status.HTTP_404_NOT_FOUND)
+
+        # 2) if I'm the owner...
+        if group.owner_id == me.id:
+            others = group.members.exclude(pk=me.pk)
+            if others.exists():
+                # pick a new owner (by lowest PK, or whatever ordering you prefer)
+                new_owner = others.order_by('id').first()
+                group.owner = new_owner
+                group.save()
+            else:
+                # I was the last person → delete the group
+                group.delete()
+                return Response(status=status.HTTP_204_NO_CONTENT)
+
+        # 3) remove me from the membership
+        group.members.remove(me)
+        return Response(status=status.HTTP_200_OK)
+
+
+    @action(detail=True, methods=['post'], url_path='remove_member')
     def remove_member(self, request, pk=None):
+        """
+        POST /api/groups/{pk}/remove_member/   { "user_id": 42 }
+        Owner-only!
+        """
         group = self.get_object()
-        user_id = request.data.get('user_id')
-        group.members.remove(user_id)
-        return Response(status=status.HTTP_204_NO_CONTENT)
+        uid   = request.data.get('user_id')
+        if not uid:
+            return Response({'user_id': ['This field is required.']},
+                            status=status.HTTP_400_BAD_REQUEST)
+
+        # cannot remove yourself via this endpoint (use leave instead)
+        if uid == request.user.id:
+            return Response({'detail': "Use /leave/ to exit."},
+                            status=status.HTTP_400_BAD_REQUEST)
+
+        # remove if they’re a member
+        if group.members.filter(pk=uid).exists():
+            group.members.remove(uid)
+            return Response(status=status.HTTP_204_NO_CONTENT)
+        else:
+            return Response({'detail': "Not a member."},
+                            status=status.HTTP_404_NOT_FOUND)
 
     @action(detail=True, methods=['patch'], url_path='rename')
     def rename(self, request, pk=None):

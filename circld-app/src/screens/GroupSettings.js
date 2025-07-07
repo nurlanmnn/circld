@@ -110,6 +110,17 @@ export default function GroupSettings() {
     onError: () => Alert.alert('Error', 'Could not rename group.'),
   });
 
+  // remove member mutation(only for admin)
+  const removeMemberMutation = useMutation({
+    mutationFn: ({ userId }) =>
+      client.post(`groups/${groupId}/remove_member/`, { user_id: userId }),
+    onSuccess: () => {
+      // refetch the members list (you should be fetching it with a queryKey like ['groupMembers', groupId])
+      qc.invalidateQueries(['groupMembers', groupId]);
+    },
+    onError: () => Alert.alert('Error', 'Could not remove member.'),
+  });
+  
   // copy invite code
   const copyCode = async () => {
     await Clipboard.setStringAsync(group.invite_code);
@@ -214,7 +225,10 @@ export default function GroupSettings() {
           <ActivityIndicator style={{ marginTop: 16 }} color={colors.primary} />
         ) : (
           members.map(u => {
-            const isAdmin = u.id === group.owner_id;
+            const isAdmin      = u.id === group.owner_id;
+            const amIOwner     = me.user_id === group.owner_id;
+            const isNotMyself  = u.id !== me.user_id;
+      
             return (
               <View key={u.id} style={styles.memberRow}>
                 {u.avatar ? (
@@ -222,11 +236,13 @@ export default function GroupSettings() {
                 ) : (
                   <View style={[styles.avatar, styles.avatarPlaceholder]} />
                 )}
+      
                 <View style={{ flex: 1 }}>
                   <Text style={styles.memberName}>
                     {u.first_name} {u.last_name}
                   </Text>
                 </View>
+      
                 <View
                   style={[
                     styles.roleBadge,
@@ -242,20 +258,34 @@ export default function GroupSettings() {
                     {isAdmin ? 'Admin' : 'Member'}
                   </Text>
                 </View>
+      
+                { /* only show Remove button if I'm the owner and this is not me */ }
+                {amIOwner && isNotMyself && (
+                  <TouchableOpacity
+                  onPress={() =>
+                    Alert.alert(
+                      `Remove ${u.first_name}?`,
+                      'This will remove them from the group.',
+                      [
+                        { text: 'Cancel', style: 'cancel' },
+                        {
+                          text: 'Remove',
+                          style: 'destructive',
+                          onPress: () => removeMemberMutation.mutate({ userId: u.id })
+                        }
+                      ]
+                    )
+                  }
+                  style={styles.removeIconContainer}
+                >
+                  <Ionicons name="person-remove-outline" size={22} color={colors.notification} />
+                </TouchableOpacity>
+                )}
               </View>
             );
           })
         )}
 
-        <TouchableOpacity
-          style={[styles.addBtnFull, { backgroundColor: colors.primary }]}
-          onPress={() =>
-            Alert.alert('Coming soon!', 'Add member flow is not implemented yet')
-          }
-        >
-          <Ionicons name="person-add-outline" size={20} color="#fff" />
-          <Text style={[styles.addTextFull]}>Add Member</Text>
-        </TouchableOpacity>
       </View>
 
       {/* — Leave Group — */}
@@ -424,5 +454,11 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     color: '#fff',
+  },
+
+  // remove member
+  removeIconContainer: {
+    padding: 8,
+    marginLeft: 8,
   },
 });
