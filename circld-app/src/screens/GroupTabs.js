@@ -8,10 +8,8 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { createMaterialTopTabNavigator } from '@react-navigation/material-top-tabs';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useTheme } from '@react-navigation/native';
-import { useFocusEffect } from '@react-navigation/native';
+import { useFocusEffect, useTheme } from '@react-navigation/native';
 
-import MembersScreen from './MembersScreen';
 import ExpensesScreen from './ExpensesScreen';
 import ChatScreen from './ChatScreen';
 import GroupSettings from './GroupSettings';
@@ -48,7 +46,7 @@ export default function GroupTabs({ navigation, route }) {
         </TouchableOpacity>
       </View>
     <Tab.Navigator
-      initialRouteName="Members"
+      initialRouteName="Chat"
       screenOptions={{
         tabBarScrollEnabled: true,
         tabBarActiveTintColor: colors.primary,
@@ -64,11 +62,6 @@ export default function GroupTabs({ navigation, route }) {
       }}
     >
       
-      <Tab.Screen
-        name="Members"
-        component={MembersScreen}
-        initialParams={{ groupId }}
-      />
       <Tab.Screen
         name="Expenses"
         component={ExpensesScreen}
