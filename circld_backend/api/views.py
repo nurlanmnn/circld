@@ -183,17 +183,32 @@ class ExpenseViewSet(viewsets.ModelViewSet):
 
 
 class MessageViewSet(viewsets.ModelViewSet):
-    serializer_class = MessageSerializer
+    serializer_class   = MessageSerializer
     permission_classes = [permissions.IsAuthenticated]
 
     def get_queryset(self):
         group_id = self.request.query_params.get('group')
-        # only fetch messages for that group
-        return Message.objects.filter(group_id=group_id).order_by('ts')
+        if not group_id:
+            # you might want to raise an error here instead
+            return Message.objects.none()
+        return (
+            Message.objects
+                   .filter(group_id=group_id)
+                   .order_by('ts')
+        )
 
     def perform_create(self, serializer):
-        # automatically set sender to the authenticated user
-        serializer.save(sender=self.request.user)
+        # 1) try body first, then fallback to query param
+        group_id = (
+            self.request.data.get('group')
+            or self.request.query_params.get('group')
+        )
+        group = get_object_or_404(Group, pk=group_id)
+
+        serializer.save(
+            sender=self.request.user,
+            group=group
+        )
 
 
 class SignupView(generics.GenericAPIView):

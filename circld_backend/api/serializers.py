@@ -85,20 +85,43 @@ class ExpenseSerializer(serializers.ModelSerializer):
         read_only_fields = ['created', 'paid_by_username']
 
 
+from rest_framework import serializers
+from .models import Message
+
 class MessageSerializer(serializers.ModelSerializer):
-    sender_username = serializers.CharField(source='sender.username', read_only=True)
+    sender_username = serializers.ReadOnlyField(source='sender.username')
+    avatar          = serializers.SerializerMethodField()
+    ts              = serializers.DateTimeField(format='%Y-%m-%dT%H:%M:%SZ', read_only=True)
 
     class Meta:
-        model = Message
+        model  = Message
         fields = [
             'id',
             'group',
-            'sender',           # client can send group ID; we override sender in perform_create
-            'sender_username',  # read-only in response
+            'sender',
+            'sender_username',
+            'avatar',
             'text',
             'ts',
         ]
-        read_only_fields = ['ts', 'sender_username']
+
+    def get_avatar(self, message):
+        """
+        Look up the sender’s profile.avatar and prepend
+        the full URL if we have a request in context.
+        """
+        try:
+            profile = message.sender.profile
+        except Exception:
+            return None
+
+        if not getattr(profile, 'avatar', None):
+            return None
+
+        avatar_url = profile.avatar.url
+        request    = self.context.get('request')
+        return request.build_absolute_uri(avatar_url) if request else avatar_url
+
 
 class SignupSerializer(serializers.ModelSerializer):
     # Validate that email is unique across all User records
