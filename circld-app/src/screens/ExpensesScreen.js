@@ -37,6 +37,7 @@ export default function ExpensesScreen({ route }) {
     queryFn: () => client.get(`groups/${groupId}/members/`).then(r => r.data),
   });
 
+  // 3) finding the current user
   const { data: me } = useQuery({
     queryKey: ['me'],
     queryFn: () => client.get('profile/').then(r => r.data),
