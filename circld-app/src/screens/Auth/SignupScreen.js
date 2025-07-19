@@ -58,6 +58,7 @@ export default function SignupScreen({ navigation }) {
           email: email.trim().toLowerCase(),
           username: username.trim(),
           password, // if needed later
+          
         });
       }
     } catch (err) {

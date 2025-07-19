@@ -29,10 +29,11 @@ export default function AccountScreen({ navigation }) {
   const [firstName, setFirstName] = useState('');
   const [lastName,  setLastName]  = useState('');
   const [email,     setEmail]     = useState('');
-  const [avatarUri, setAvatarUri] = useState(null);
+  const [avatarUri, setAvatarUri] = useState('placeholder');
   const [saving,    setSaving]    = useState(false);
 
   const [hasLibraryPermission, setHasLibraryPermission] = useState(false);
+
 
   // fetch profile from API
   async function fetchProfile() {
@@ -90,7 +91,6 @@ export default function AccountScreen({ navigation }) {
 
   // save changes (or trigger email‐change flow)
   const handleSave = async () => {
-    // if email changed, send verification code
     if (email !== profile.email) {
       try {
         const { data } = await client.post(
@@ -113,29 +113,33 @@ export default function AccountScreen({ navigation }) {
         );
       }
     }
-
+  
     setSaving(true);
     const formData = new FormData();
     formData.append('first_name', firstName);
-    formData.append('last_name',  lastName);
-    formData.append('email',      email);
-
-    if (avatarUri?.startsWith('file://')) {
-      const name = avatarUri.split('/').pop();
+    formData.append('last_name', lastName);
+    formData.append('email', email);
+  
+    // ✅ New logic here
+    const finalAvatarUri = avatarUri === 'placeholder' ? null : avatarUri;
+  
+    // ✅ Only attach image if it's picked from device
+    if (finalAvatarUri?.startsWith('file://')) {
+      const name = finalAvatarUri.split('/').pop();
       const ext  = name.split('.').pop();
       formData.append('avatar', {
-        uri:  avatarUri,
+        uri:  finalAvatarUri,
         name,
         type: `image/${ext}`,
       });
     }
-
+  
     try {
       const { data } = await client.put('profile/', formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
       });
       Alert.alert('Saved', 'Your profile has been updated.');
-      setAvatarUri(data.avatar);
+      setAvatarUri(data.avatar); // will be full URL now
       setProfile(data);
     } catch (err) {
       Alert.alert('Error', JSON.stringify(err.response?.data || err.message));
@@ -143,6 +147,7 @@ export default function AccountScreen({ navigation }) {
       setSaving(false);
     }
   };
+  
 
   // delete account completely
   const deleteAccount = async () => {
@@ -194,12 +199,12 @@ export default function AccountScreen({ navigation }) {
 
         <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
           <ScrollView contentContainerStyle={styles.container}>
-            {avatarUri ? (
-              <Image source={{ uri: avatarUri }} style={styles.avatar} />
-            ) : (
+            {avatarUri === 'placeholder' ? (
               <View style={styles.avatarPlaceholder}>
                 <Ionicons name="person-circle" size={100} color="#bbb" />
               </View>
+            ) : (
+              <Image source={{ uri: avatarUri }} style={styles.avatar} />
             )}
 
             <TouchableOpacity onPress={pickImage}>

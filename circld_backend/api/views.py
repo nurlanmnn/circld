@@ -5,6 +5,7 @@ from django.contrib.auth import get_user_model
 from rest_framework import viewsets, permissions, status, generics
 from django.shortcuts import get_object_or_404
 from rest_framework.decorators import action
+from rest_framework_simplejwt.tokens import RefreshToken
 
 from .permissions import IsGroupOwner
 from .models import Group, Expense, Message, Profile
@@ -256,7 +257,14 @@ class VerifyCodeView(APIView):
         profile.email_token = ''
         profile.save()
 
-        return Response({"message": "Email verified! You can now log in."})
+        # generate JWT tokens
+        refresh = RefreshToken.for_user(user)
+
+        return Response({
+            "message": "Email verified successfully! You can now log in.",
+            "access": str(refresh.access_token),
+            "refresh": str(refresh),
+        }, status=status.HTTP_200_OK)
 
 class ResendCodeView(APIView):
     permission_classes = []

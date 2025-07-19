@@ -15,6 +15,7 @@ import {
   ScrollView,
 } from 'react-native';
 import { client } from '../../api/client';
+import * as SecureStore from 'expo-secure-store';
 
 export default function VerifyCodeScreen({ route, navigation }) {
   const { email } = route.params;  // passed from SignupScreen
@@ -23,15 +24,17 @@ export default function VerifyCodeScreen({ route, navigation }) {
 
   const handleVerify = async () => {
     if (code.trim().length !== 6) {
-      Alert.alert('Invalid code','Code must be 6 digits.');
+      Alert.alert('Invalid code', 'Code must be 6 digits.');
       return;
     }
     setLoading(true);
     try {
       const { data } = await client.post('verify-code/', { email, code });
-      Alert.alert('Success', data.message, [
-        { text: 'OK', onPress: () => navigation.replace('Main') }
-      ]);
+  
+      await SecureStore.setItemAsync('accessToken', data.access);
+      await SecureStore.setItemAsync('refreshToken', data.refresh);
+  
+      navigation.replace('Main');
     } catch (err) {
       Alert.alert('Error', err.response?.data?.error || 'Try again.');
     } finally {
