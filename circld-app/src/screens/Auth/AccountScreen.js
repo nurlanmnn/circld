@@ -16,11 +16,13 @@ import {
   TouchableOpacity,
   Keyboard,
 } from 'react-native';
+import { Image as RNImage } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as ImagePicker from 'expo-image-picker';
 import * as SecureStore from 'expo-secure-store';
 import { Ionicons } from '@expo/vector-icons';
 import { client } from '../../api/client';
+import defaultAvatar from '../../../assets/default-avatar.png';
 
 export default function AccountScreen({ navigation }) {
   const [profile, setProfile] = useState(null);
@@ -29,11 +31,11 @@ export default function AccountScreen({ navigation }) {
   const [firstName, setFirstName] = useState('');
   const [lastName,  setLastName]  = useState('');
   const [email,     setEmail]     = useState('');
-  const [avatarUri, setAvatarUri] = useState('placeholder');
+  const DEFAULT_AVATAR_URI = RNImage.resolveAssetSource(defaultAvatar).uri;
+  const [avatarUri, setAvatarUri] = useState(DEFAULT_AVATAR_URI);
   const [saving,    setSaving]    = useState(false);
 
   const [hasLibraryPermission, setHasLibraryPermission] = useState(false);
-
 
   // fetch profile from API
   async function fetchProfile() {
@@ -43,7 +45,7 @@ export default function AccountScreen({ navigation }) {
       setFirstName(data.first_name);
       setLastName(data.last_name);
       setEmail(data.email);
-      setAvatarUri(data.avatar);
+      setAvatarUri(data.avatar || DEFAULT_AVATAR_URI);
     } catch {
       Alert.alert('Error', 'Could not load profile.');
     } finally {
@@ -121,7 +123,7 @@ export default function AccountScreen({ navigation }) {
     formData.append('email', email);
   
     // ✅ New logic here
-    const finalAvatarUri = avatarUri === 'placeholder' ? null : avatarUri;
+    const finalAvatarUri = avatarUri === DEFAULT_AVATAR_URI ? null : avatarUri;
   
     // ✅ Only attach image if it's picked from device
     if (finalAvatarUri?.startsWith('file://')) {
@@ -199,13 +201,7 @@ export default function AccountScreen({ navigation }) {
 
         <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
           <ScrollView contentContainerStyle={styles.container}>
-            {avatarUri === 'placeholder' ? (
-              <View style={styles.avatarPlaceholder}>
-                <Ionicons name="person-circle" size={100} color="#bbb" />
-              </View>
-            ) : (
-              <Image source={{ uri: avatarUri }} style={styles.avatar} />
-            )}
+          <Image source={{ uri: avatarUri || DEFAULT_AVATAR_URI }} style={styles.avatar} />
 
             <TouchableOpacity onPress={pickImage}>
               <Text style={styles.changePhoto}>Change Photo</Text>

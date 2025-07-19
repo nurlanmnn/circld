@@ -18,6 +18,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Ionicons } from '@expo/vector-icons';
 import { client } from '../api/client';
+import { DEFAULT_AVATAR_URI } from '../constants/avatar'; 
 
 export default function ChatScreen({ route }) {
   const { groupId } = route.params;
@@ -151,9 +152,13 @@ export default function ChatScreen({ route }) {
         ]}
       >
         {/* Left side avatar (others) */}
-        {!isMe && item.avatar && (
-          <Image source={{ uri: item.avatar }} style={styles.avatar} />
+        {!isMe && (
+          <Image
+            source={{ uri: item.avatar || DEFAULT_AVATAR_URI }}
+            style={styles.avatar}
+          />
         )}
+
   
         {/* The bubble */}
         <View
@@ -162,6 +167,11 @@ export default function ChatScreen({ route }) {
             isMe ? styles.bubbleRight : styles.bubbleLeft,
           ]}
         >
+          {!isMe && (
+            <Text style={styles.senderNameInside}>
+              {item.sender_name || 'Unknown'}
+            </Text>
+          )}
           <Text style={[styles.bubbleText, isMe && { color: '#fff' }]}>
             {item.text}
           </Text>
@@ -174,9 +184,13 @@ export default function ChatScreen({ route }) {
         </View>
   
         {/* Right side avatar (me) */}
-        {isMe && me?.avatar && (
-          <Image source={{ uri: me.avatar }} style={styles.avatar} />
+        {isMe && (
+          <Image
+            source={{ uri: me?.avatar || DEFAULT_AVATAR_URI }}
+            style={styles.avatar}
+          />
         )}
+
       </View>
     );
   });
@@ -360,5 +374,13 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.15,
     shadowRadius: 3,
     elevation: 2,
+  },
+
+  // user's name and last name above text
+  senderNameInside: {
+    fontSize: 12,
+    color: '#888',
+    fontWeight: '500',
+    marginBottom: 4,
   },
 });

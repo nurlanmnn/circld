@@ -90,6 +90,7 @@ from .models import Message
 
 class MessageSerializer(serializers.ModelSerializer):
     sender_username = serializers.ReadOnlyField(source='sender.username')
+    sender_name     = serializers.SerializerMethodField()
     avatar          = serializers.SerializerMethodField()
     ts              = serializers.DateTimeField(format='%Y-%m-%dT%H:%M:%SZ', read_only=True)
 
@@ -100,6 +101,7 @@ class MessageSerializer(serializers.ModelSerializer):
             'group',
             'sender',
             'sender_username',
+            'sender_name',
             'avatar',
             'text',
             'ts',
@@ -121,6 +123,10 @@ class MessageSerializer(serializers.ModelSerializer):
         avatar_url = profile.avatar.url
         request    = self.context.get('request')
         return request.build_absolute_uri(avatar_url) if request else avatar_url
+
+    def get_sender_name(self, message):
+        user = message.sender
+        return f"{user.first_name} {user.last_name}".strip() or user.username
 
 
 class SignupSerializer(serializers.ModelSerializer):

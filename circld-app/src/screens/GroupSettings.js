@@ -19,7 +19,7 @@ import { Ionicons } from '@expo/vector-icons';
 import * as Clipboard from 'expo-clipboard';
 import { client } from '../api/client';
 import { CommonActions } from '@react-navigation/native';
-
+import { DEFAULT_AVATAR_URI } from '../constants/avatar'; 
 
 export default function GroupSettings() {
   const insets = useSafeAreaInsets();
@@ -231,11 +231,11 @@ export default function GroupSettings() {
       
             return (
               <View key={u.id} style={styles.memberRow}>
-                {u.avatar ? (
-                  <Image source={{ uri: u.avatar }} style={styles.avatar} />
-                ) : (
-                  <View style={[styles.avatar, styles.avatarPlaceholder]} />
-                )}
+                <Image
+                  source={{ uri: u.avatar || DEFAULT_AVATAR_URI }}
+                  style={styles.avatar}
+                />
+
       
                 <View style={{ flex: 1 }}>
                   <Text style={styles.memberName}>

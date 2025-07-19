@@ -12,10 +12,13 @@ import {
   Platform,
   TouchableWithoutFeedback,
   Keyboard,
+  TouchableOpacity,
   ScrollView,
 } from 'react-native';
 import { client } from '../../api/client';
 import * as SecureStore from 'expo-secure-store';
+import { Ionicons } from '@expo/vector-icons';
+
 
 export default function VerifyCodeScreen({ route, navigation }) {
   const { email } = route.params;  // passed from SignupScreen
@@ -47,6 +50,11 @@ export default function VerifyCodeScreen({ route, navigation }) {
       style={{ flex: 1 }}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
+      <View style={styles.backContainer}>
+        <TouchableOpacity onPress={() => navigation.replace('Welcome')}>
+          <Ionicons name="close" size={28} color="#333" />
+        </TouchableOpacity>
+      </View>
       <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
         <ScrollView
           contentContainerStyle={styles.container}
@@ -85,6 +93,12 @@ export default function VerifyCodeScreen({ route, navigation }) {
 
 const styles = StyleSheet.create({
   container: { flex:1, padding:20, justifyContent:'center' },
+  backContainer: {
+    position: 'absolute',
+    top: Platform.OS === 'ios' ? 50 : 20,
+    left: 16,
+    zIndex: 10,
+  },
   instruction: { marginBottom:16, fontSize:16, textAlign:'center' },
   input: { 
     height:50, borderWidth:1, borderColor:'#ccc', 
