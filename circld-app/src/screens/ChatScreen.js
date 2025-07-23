@@ -141,59 +141,45 @@ export default function ChatScreen({ route }) {
     : insets.bottom - inputBarHeight; // Input bar height + safe area when keyboard is closed
 
   
-  const ChatMessage = React.memo(({ item, me, styles }) => {
-    const isMe = me?.user_id === item.sender;
-  
-    return (
-      <View
-        style={[
-          styles.messageRow,
-          isMe ? styles.rowRight : styles.rowLeft,
-        ]}
-      >
-        {/* Left side avatar (others) */}
-        {!isMe && (
-          <Image
-            source={{ uri: item.avatar || DEFAULT_AVATAR_URI }}
-            style={styles.avatar}
-          />
-        )}
-
-  
-        {/* The bubble */}
-        <View
-          style={[
-            styles.bubble,
-            isMe ? styles.bubbleRight : styles.bubbleLeft,
-          ]}
-        >
+    const ChatMessage = React.memo(({ item, me, styles, showName }) => {
+      const isMe = me?.user_id === item.sender;
+    
+      return (
+        <View style={[styles.messageRow, isMe ? styles.rowRight : styles.rowLeft]}>
           {!isMe && (
-            <Text style={styles.senderNameInside}>
-              {item.sender_name || 'Unknown'}
-            </Text>
+            <Image
+              source={{ uri: item.avatar || DEFAULT_AVATAR_URI }}
+              style={styles.avatar}
+            />
           )}
-          <Text style={[styles.bubbleText, isMe && { color: '#fff' }]}>
-            {item.text}
-          </Text>
-          <Text style={[styles.tsText, isMe ? styles.timeRight : styles.timeLeft]}>
-            {new Date(item.ts).toLocaleTimeString([], {
-              hour: '2-digit',
-              minute: '2-digit',
-            })}
-          </Text>
+    
+          <View style={[styles.bubble, isMe ? styles.bubbleRight : styles.bubbleLeft]}>
+            {!isMe && showName && (
+              <Text style={styles.senderNameInside}>
+                {item.sender_name || 'Unknown'}
+              </Text>
+            )}
+            <Text style={[styles.bubbleText, isMe && { color: '#fff' }]}>
+              {item.text}
+            </Text>
+            <Text style={[styles.tsText, isMe ? styles.timeRight : styles.timeLeft]}>
+              {new Date(item.ts).toLocaleTimeString([], {
+                hour: '2-digit',
+                minute: '2-digit',
+              })}
+            </Text>
+          </View>
+    
+          {isMe && (
+            <Image
+              source={{ uri: me?.avatar || DEFAULT_AVATAR_URI }}
+              style={styles.avatar}
+            />
+          )}
         </View>
-  
-        {/* Right side avatar (me) */}
-        {isMe && (
-          <Image
-            source={{ uri: me?.avatar || DEFAULT_AVATAR_URI }}
-            style={styles.avatar}
-          />
-        )}
-
-      </View>
-    );
-  });
+      );
+    });
+    
 
   return (
     <KeyboardAvoidingView
@@ -209,9 +195,20 @@ export default function ChatScreen({ route }) {
         renderSectionHeader={({ section }) => (
           <Text style={styles.sectionHeader}>{section.title}</Text>
         )}
-        renderItem={({ item }) => (
-          <ChatMessage item={item} me={me} styles={styles} />
-        )}
+        renderItem={({ item, index, section }) => {
+          const previousItem = index > 0 ? section.data[index - 1] : null;
+          const showName = !previousItem || previousItem.sender !== item.sender;
+        
+          return (
+            <ChatMessage
+              item={item}
+              me={me}
+              styles={styles}
+              showName={showName}
+            />
+          );
+        }}
+        
         getItemLayout={(_, index) => ({
           length: 80,
           offset: 80 * index,

@@ -1,23 +1,26 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
   FlatList,
   TextInput,
   TouchableOpacity,
-  Modal,
   ActivityIndicator,
   Alert,
   StyleSheet,
   Platform,
-  TouchableWithoutFeedback
+  TouchableWithoutFeedback,
+  StatusBar,
+  KeyboardAvoidingView
 } from 'react-native';
+import Modal from 'react-native-modal';
 import { Picker } from '@react-native-picker/picker';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '@react-navigation/native';
 import { client } from '../api/client';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function ExpensesScreen({ route }) {
   const { groupId } = route.params;
@@ -45,6 +48,13 @@ export default function ExpensesScreen({ route }) {
 
   // modal visibility & form state
   const [showAdd,   setShowAdd]   = useState(false);
+  useEffect(() => {
+    if (!showAdd) {
+      // Hack: force layout refresh when modal closes
+      StatusBar.setHidden(true);
+      setTimeout(() => StatusBar.setHidden(false), 50);
+    }
+  }, [showAdd]);  
   const [amount,    setAmount]    = useState('');
   const [note,      setNote]      = useState('');
   const [category,  setCategory]  = useState('General');
@@ -105,24 +115,22 @@ export default function ExpensesScreen({ route }) {
   }
 
   return (
-    <View style={[styles.container, { paddingBottom: insets.bottom }]}>
+    <View style={[ styles.container, {paddingTop: insets.top - 50} ]}>
       <FlatList
         data={expenses}
         keyExtractor={e => String(e.id)}
         renderItem={({ item }) => (
-          <View style={styles.expenseItem}>
+          <View style={[styles.expenseItem ]}>
             <Text style={styles.expenseText}>
               {item.paid_by_username} paid ${parseFloat(item.amount).toFixed(2)}
               {item.note ? ` – ${item.note}` : ''}
             </Text>
-
             <Text style={styles.expenseDate}>
               {new Date(item.created).toLocaleString()}
             </Text>
           </View>
         )}
         ListEmptyComponent={<Text style={styles.message}>No expenses yet.</Text>}
-        // footer = your big blue button
         ListFooterComponent={() => (
           <TouchableOpacity
             style={styles.addButton}
@@ -135,118 +143,117 @@ export default function ExpensesScreen({ route }) {
             <Text style={styles.addText}>Add Expense</Text>
           </TouchableOpacity>
         )}
-        contentContainerStyle={{ paddingBottom: 100 }}
       />
 
-      {/* ——————— ADD EXPENSE MODAL ——————— */}
-      <Modal visible={showAdd} animationType="slide">
-        <View style={[styles.modalHeader, { paddingTop: insets.top }]}>
-          <TouchableOpacity onPress={() => setShowAdd(false)}>
-            <Ionicons name="close" size={28} color="#333" />
-          </TouchableOpacity>
-          <Text style={styles.modalTitle}>Add Expense</Text>
-          <View style={{ width: 28 }} /> 
-        </View>
-
-        <View style={styles.modalBody}>
-          <TextInput
-            placeholder="Amount (e.g. 12.50)"
-            keyboardType="numeric"
-            value={amount}
-            onChangeText={setAmount}
-            style={styles.input}
-          />
-
-          <TextInput
-            placeholder="Note (optional)"
-            value={note}
-            onChangeText={setNote}
-            style={styles.input}
-          />
-
-          <Text style={styles.label}>Category</Text>
-          <TouchableOpacity
-            style={styles.dropdownButton}
-            onPress={() => setShowCatPicker(true)}
-          >
-            <Text style={styles.dropdownText}>
-              {category || 'Category'}
-            </Text>
-            <Ionicons
-              name={showCatPicker ? 'chevron-up' : 'chevron-down'}
-              size={20}
-              color={colors.text}
-            />
-          </TouchableOpacity>
-
-          {showCatPicker && (
-            <Modal
-              transparent
-              animationType="slide"
-              onRequestClose={() => setShowCatPicker(false)}
-            >
-              {/* darkened backdrop: tapping it closes picker */}
-              <TouchableWithoutFeedback onPress={() => setShowCatPicker(false)}>
-                <View style={styles.modalOverlay} />
-              </TouchableWithoutFeedback>
-
-              {/* picker container */}
-              <View style={styles.modalPickerContainer}>
-                <Picker
-                  selectedValue={category}
-                  onValueChange={value => {
-                    setCategory(value);
-                    setShowCatPicker(false);
-                  }}
-                >
-                  <Picker.Item label="General" value="General" />
-                  <Picker.Item label="Food" value="Food" />
-                  <Picker.Item label="Travel" value="Travel" />
-                  <Picker.Item label="Fun" value="Fun" />
-                  <Picker.Item label="Gas" value="Gas" />
-                  {/* …etc */}
-                </Picker>
-              </View>
-            </Modal>
-          )}
-
-
-          <Text style={styles.label}>Paid by</Text>
-                <Text style={styles.selector}>
-                  {me.first_name} {me.last_name}
-                </Text>
-
-          <Text style={styles.label}>Split between</Text>
-          {members.map(u => (
-            <TouchableOpacity
-              key={u.id}
-              style={styles.checkboxRow}
-              onPress={() => {
-                setSplit(s => 
-                  s.includes(u.id)
-                    ? s.filter(x => x!==u.id)
-                    : [...s, u.id]
-                );
-              }}
-            >
-              <Text style={styles.checkboxText}>
-                {split.includes(u.id) ? '☑' : '☐'} {u.first_name} {u.last_name}
-              </Text>
+        {/* ——————— ADD EXPENSE MODAL ——————— */}
+        <Modal isVisible={showAdd} onBackdropPress={() => setShowAdd(false)}>
+          <View style={styles.modalBodyWrapper}>
+            <TouchableOpacity onPress={() => setShowAdd(false)}>
+              <Ionicons name="close" size={28} color="#333" />
             </TouchableOpacity>
-          ))}
+            <Text style={styles.modalTitle}>Add Expense</Text>
+            <View style={{ width: 28 }} /> 
+          </View>
 
-          <TouchableOpacity
-            style={styles.saveBtn}
-            onPress={handleSave}
-            disabled={addExp.isLoading}
-          >
-            {addExp.isLoading
-              ? <ActivityIndicator color="#fff"/>
-              : <Text style={styles.saveText}>Save</Text>}
-          </TouchableOpacity>
-        </View>
-      </Modal>
-    </View>
+          <View style={styles.modalBody}>
+            <TextInput
+              placeholder="Amount (e.g. 12.50)"
+              keyboardType="numeric"
+              value={amount}
+              onChangeText={setAmount}
+              style={styles.input}
+            />
+
+            <TextInput
+              placeholder="Note (optional)"
+              value={note}
+              onChangeText={setNote}
+              style={styles.input}
+            />
+
+            <Text style={styles.label}>Category</Text>
+            <TouchableOpacity
+              style={styles.dropdownButton}
+              onPress={() => setShowCatPicker(true)}
+            >
+              <Text style={styles.dropdownText}>
+                {category || 'Category'}
+              </Text>
+              <Ionicons
+                name={showCatPicker ? 'chevron-up' : 'chevron-down'}
+                size={20}
+                color={colors.text}
+              />
+            </TouchableOpacity>
+
+            {showCatPicker && (
+              <Modal
+                transparent
+                animationType="slide"
+                onRequestClose={() => setShowCatPicker(false)}
+              >
+                {/* darkened backdrop: tapping it closes picker */}
+                <TouchableWithoutFeedback onPress={() => setShowCatPicker(false)}>
+                  <View style={styles.modalOverlay} />
+                </TouchableWithoutFeedback>
+
+                {/* picker container */}
+                <View style={styles.modalPickerContainer}>
+                  <Picker
+                    selectedValue={category}
+                    onValueChange={value => {
+                      setCategory(value);
+                      setShowCatPicker(false);
+                    }}
+                  >
+                    <Picker.Item label="General" value="General" />
+                    <Picker.Item label="Food" value="Food" />
+                    <Picker.Item label="Travel" value="Travel" />
+                    <Picker.Item label="Fun" value="Fun" />
+                    <Picker.Item label="Gas" value="Gas" />
+                    {/* …etc */}
+                  </Picker>
+                </View>
+              </Modal>
+            )}
+
+
+            <Text style={styles.label}>Paid by</Text>
+                  <Text style={styles.selector}>
+                    {me.first_name} {me.last_name}
+                  </Text>
+
+            <Text style={styles.label}>Split between</Text>
+            {members.map(u => (
+              <TouchableOpacity
+                key={u.id}
+                style={styles.checkboxRow}
+                onPress={() => {
+                  setSplit(s => 
+                    s.includes(u.id)
+                      ? s.filter(x => x!==u.id)
+                      : [...s, u.id]
+                  );
+                }}
+              >
+                <Text style={styles.checkboxText}>
+                  {split.includes(u.id) ? '☑' : '☐'} {u.first_name} {u.last_name}
+                </Text>
+              </TouchableOpacity>
+            ))}
+
+            <TouchableOpacity
+              style={styles.saveBtn}
+              onPress={handleSave}
+              disabled={addExp.isLoading}
+            >
+              {addExp.isLoading
+                ? <ActivityIndicator color="#fff"/>
+                : <Text style={styles.saveText}>Save</Text>}
+            </TouchableOpacity>
+          </View>
+        </Modal>
+      </View>
   );
 }
 
@@ -329,8 +336,6 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     padding: 12,
   },
-  
-
 
   dropdownButton: {
     flexDirection: 'row',
@@ -356,4 +361,14 @@ const styles = StyleSheet.create({
     borderTopRightRadius: 12,
     padding: 10,
   },
+
+  modalBodyWrapper: {
+    backgroundColor: '#fff',
+    borderRadius: 10,
+    paddingVertical: 16,
+    paddingHorizontal: 16,
+    maxHeight: '90%',
+  }
+  
+
 });
